@@ -17,6 +17,8 @@ public sealed class ProcessRepository(HowlyDbContext context) : IProcessReposito
     public async Task<IReadOnlyList<Process>> ListOverdueAsync(DateTimeOffset now, CancellationToken cancellationToken = default) =>
         await context.Processes
             .Where(p => p.Status == ProcessStatus.InProgress && p.ActiveStepDueAt != null && p.ActiveStepDueAt < now)
+            // Only the ones not warned yet: late processes piling up do not make every round heavier.
+            .Where(p => p.Steps.Any(s => s.Id == p.ActiveStepId && s.OverdueNotifiedAt == null))
             .ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<Process>> ListOpenAssignedToAsync(Guid assigneeId, CancellationToken cancellationToken = default) =>

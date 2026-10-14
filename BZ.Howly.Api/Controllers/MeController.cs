@@ -3,6 +3,7 @@ using BZ.Howly.Api.Core.DTO.Request;
 using BZ.Howly.Api.Core.DTO.Response;
 using BZ.Howly.Api.Core.Interfaces.Service;
 using BZ.Howly.Api.Extensions;
+using BZ.Howly.Api.Tenancy;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,6 +12,7 @@ namespace BZ.Howly.Api.Controllers;
 /// <summary>Resources that belong to the signed-in user, whatever the profile.</summary>
 [ApiController]
 [Route("api/me")]
+[AllowOnPlatform]
 [Authorize]
 [AllowPendingPasswordChange]
 [AllowPendingProfileConfirmation]

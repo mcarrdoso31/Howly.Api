@@ -1,3 +1,5 @@
+using BZ.Howly.Api.Core.Shared;
+
 namespace BZ.Howly.Api.Core.Customers;
 
 /// <summary>Contact data as typed by a person, before validation (phone may carry the mask).</summary>
@@ -24,7 +26,7 @@ public sealed class CustomerContact
     /// <summary>Builds a contact from data already checked by <see cref="Customer.Validate"/>.</summary>
     internal static CustomerContact FromValidated(ContactDetails details, string phoneDigits, int position) => new()
     {
-        Id = Guid.NewGuid(),
+        Id = Ids.New(),
         Name = details.Name!.Trim(),
         Email = details.Email!.Trim(),
         Phone = phoneDigits,

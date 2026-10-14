@@ -1,13 +1,12 @@
-using BZ.Howly.Api.Core.Interfaces.Service;
-
 namespace BZ.Howly.Api.Workers;
 
 /// <summary>
 /// Checks for steps past their deadline when the API starts and then every <c>OverdueSteps:Interval</c> (1 hour by default).
-/// <c>OverdueSteps:Enabled = false</c> turns it off.
+/// <c>OverdueSteps:Enabled = false</c> turns it off. Every instance runs this timer; the shared lock in
+/// <see cref="OverdueStepsRunner"/> makes each round happen once.
 /// </summary>
 public sealed class OverdueStepsWorker(
-    IServiceScopeFactory scopeFactory,
+    OverdueStepsRunner runner,
     TimeProvider timeProvider,
     IConfiguration configuration,
     ILogger<OverdueStepsWorker> logger) : BackgroundService
@@ -19,17 +18,22 @@ public sealed class OverdueStepsWorker(
             return;
 
         var interval = configuration.GetValue("OverdueSteps:Interval", TimeSpan.FromHours(1));
+        if (interval <= TimeSpan.Zero)
+        {
+            logger.LogError("OverdueSteps:Interval must be positive; the overdue check is off.");
+            return;
+        }
+
         using var timer = new PeriodicTimer(interval, timeProvider);
         do
         {
             try
             {
-                await using var scope = scopeFactory.CreateAsyncScope();
-                await scope.ServiceProvider.GetRequiredService<IOverdueStepService>().NotifyOverdueAsync(timeProvider.GetUtcNow(), stoppingToken);
+                await runner.RunOnceAsync(timeProvider.GetUtcNow(), stoppingToken);
             }
-            catch (Exception exception) when (exception is not OperationCanceledException)
+            catch (Exception exception) when (!stoppingToken.IsCancellationRequested)
             {
-                // The next round tries again; one failure must not stop the checks for good.
+                // The next round tries again; one failure must not stop the checks (nor the API) for good.
                 logger.LogError(exception, "Checking overdue steps failed.");
             }
         }

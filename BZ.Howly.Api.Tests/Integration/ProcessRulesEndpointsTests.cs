@@ -263,8 +263,8 @@ public class ProcessRulesEndpointsTests(HowlyApiFactory factory) : IClassFixture
     public async Task Saving_over_a_process_someone_else_changed_is_a_conflict()
     {
         var s = await ScenarioAsync();
-        using var first = factory.Services.CreateScope();
-        using var second = factory.Services.CreateScope();
+        using var first = factory.CreateTenantScope();
+        using var second = factory.CreateTenantScope();
         var mine = await first.ServiceProvider.GetRequiredService<IProcessRepository>().FindByIdAsync(s.ProcessId);
         var theirs = await second.ServiceProvider.GetRequiredService<IProcessRepository>().FindByIdAsync(s.ProcessId);
         var actor = new Actor(s.StaffId, "Jane Analyst");

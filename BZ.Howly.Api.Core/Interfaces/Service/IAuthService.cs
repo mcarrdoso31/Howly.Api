@@ -12,6 +12,9 @@ public interface IAuthService
 {
     Task<LoginResult> LoginCustomerAsync(CustomerLoginRequest request, CancellationToken cancellationToken = default);
     Task<LoginResult> LoginInternalAsync(InternalLoginRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Sign in on the platform portal: only platform owners.</summary>
+    Task<LoginResult> LoginPlatformAsync(InternalLoginRequest request, CancellationToken cancellationToken = default);
     Task<AuthSession?> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default);
     Task LogoutAsync(string refreshToken, CancellationToken cancellationToken = default);
     Task<UserResponse?> GetUserAsync(Guid userId, CancellationToken cancellationToken = default);

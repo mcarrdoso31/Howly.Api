@@ -1,5 +1,6 @@
 using BZ.Howly.Api.Core.Notifications;
 using BZ.Howly.Api.Core.Processes;
+using BZ.Howly.Api.DAO.Context;
 using BZ.Howly.Api.DAO.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -19,11 +20,15 @@ public sealed class NotificationConfiguration : IEntityTypeConfiguration<Notific
         builder.Property(n => n.Details).HasMaxLength(Process.MaxCommentLength);
         builder.Property(n => n.ActorName).HasMaxLength(200).IsRequired();
 
-        // The bell asks "my unread ones, newest first"; the timeline asks "this process, this person".
-        builder.HasIndex(n => new { n.UserId, n.ReadAt });
-        builder.HasIndex(n => new { n.ProcessId, n.UserId });
+        // The bell asks "mine, newest first" (and counts the unread ones); the timeline asks "this process, this person".
+        const string tenant = HowlyDbContext.TenantIdProperty;
+        builder.HasIndex(tenant, nameof(Notification.UserId), nameof(Notification.CreatedAt)).IncludeProperties(n => n.ReadAt);
+        builder.HasIndex(tenant, nameof(Notification.UserId), nameof(Notification.ReadAt));
+        // One notification per person and event: a repeated one would break the "seen by the customer" lookup.
+        builder.HasIndex(tenant, nameof(Notification.ProcessId), nameof(Notification.UserId), nameof(Notification.EventId)).IsUnique();
 
         builder.HasOne<AppUser>().WithMany().HasForeignKey(n => n.UserId).OnDelete(DeleteBehavior.Cascade);
-        builder.HasOne<Process>().WithMany().HasForeignKey(n => n.ProcessId).OnDelete(DeleteBehavior.Cascade);
+        // The history of a process is never deleted along with it.
+        builder.HasOne<Process>().WithMany().HasForeignKey(n => n.ProcessId).OnDelete(DeleteBehavior.Restrict);
     }
 }

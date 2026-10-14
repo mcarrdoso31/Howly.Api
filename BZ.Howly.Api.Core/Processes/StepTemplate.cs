@@ -1,3 +1,5 @@
+using BZ.Howly.Api.Core.Shared;
+
 namespace BZ.Howly.Api.Core.Processes;
 
 /// <summary>Step data as typed by the staff, before validation.</summary>
@@ -56,7 +58,7 @@ public sealed class StepTemplate
     /// <summary>Builds a step from data already checked by <see cref="ProcessType.Validate"/>.</summary>
     internal static StepTemplate FromValidated(StepTemplateDetails details, int position) => new()
     {
-        Id = Guid.NewGuid(),
+        Id = Ids.New(),
         Position = position,
         Name = details.Name!.Trim(),
         Description = ProcessText.Blank(details.Description),

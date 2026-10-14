@@ -7,6 +7,9 @@ namespace BZ.Howly.Api.DAO.Identity;
 /// </summary>
 public sealed class AppUser : IdentityUser<Guid>
 {
+    /// <summary>The consultancy the account belongs to: logins are unique per consultancy, never across them.</summary>
+    public Guid TenantId { get; set; }
+
     public string DisplayName { get; set; } = string.Empty;
 
     /// <summary>Set when the staff creates the account or resets its password; cleared once the user picks a new one.</summary>

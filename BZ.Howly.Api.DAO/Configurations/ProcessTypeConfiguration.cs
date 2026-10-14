@@ -1,4 +1,5 @@
 using BZ.Howly.Api.Core.Processes;
+using BZ.Howly.Api.DAO.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -13,7 +14,7 @@ public sealed class ProcessTypeConfiguration : IEntityTypeConfiguration<ProcessT
         builder.Property(t => t.Id).ValueGeneratedNever();
         builder.Property(t => t.Name).HasMaxLength(ProcessType.MaxNameLength).IsRequired();
         builder.Property(t => t.Description).HasMaxLength(ProcessType.MaxDescriptionLength);
-        builder.HasIndex(t => t.Name);
+        builder.HasIndex(HowlyDbContext.TenantIdProperty, nameof(ProcessType.Name));
 
         builder.OwnsMany(t => t.Steps, step =>
         {

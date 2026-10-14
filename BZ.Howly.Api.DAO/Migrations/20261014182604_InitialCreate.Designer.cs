@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BZ.Howly.Api.DAO.Migrations
 {
     [DbContext(typeof(HowlyDbContext))]
-    [Migration("20261013211846_StepOverdueWarning")]
-    partial class StepOverdueWarning
+    [Migration("20261014182604_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -51,6 +51,9 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.Property<Guid>("CreatedBy")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("TradeName")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -60,10 +63,10 @@ namespace BZ.Howly.Api.DAO.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Cnpj")
+                    b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.HasIndex("UserId")
+                    b.HasIndex("TenantId", "Cnpj")
                         .IsUnique();
 
                     b.ToTable("Customers", (string)null);
@@ -89,6 +92,9 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.Property<DateTimeOffset?>("RevokedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -100,6 +106,8 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("FamilyId");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("TokenHash")
                         .IsUnique();
@@ -125,6 +133,9 @@ namespace BZ.Howly.Api.DAO.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(7)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("ThemeMode")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -141,6 +152,8 @@ namespace BZ.Howly.Api.DAO.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.HasKey("UserId");
+
+                    b.HasIndex("TenantId");
 
                     b.ToTable("UserPreferences", (string)null);
                 });
@@ -183,6 +196,9 @@ namespace BZ.Howly.Api.DAO.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(40)
@@ -193,9 +209,18 @@ namespace BZ.Howly.Api.DAO.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProcessId", "UserId");
+                    b.HasIndex("ProcessId");
 
-                    b.HasIndex("UserId", "ReadAt");
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("TenantId", "UserId", "CreatedAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("TenantId", "UserId", "CreatedAt"), new[] { "ReadAt" });
+
+                    b.HasIndex("TenantId", "UserId", "ReadAt");
+
+                    b.HasIndex("TenantId", "ProcessId", "UserId", "EventId")
+                        .IsUnique();
 
                     b.ToTable("Notifications", (string)null);
                 });
@@ -233,6 +258,9 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("PausedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<Guid>("ProcessTypeId")
                         .HasColumnType("uniqueidentifier");
 
@@ -250,6 +278,9 @@ namespace BZ.Howly.Api.DAO.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -257,6 +288,10 @@ namespace BZ.Howly.Api.DAO.Migrations
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("WaitingOn")
                         .HasMaxLength(20)
@@ -272,7 +307,17 @@ namespace BZ.Howly.Api.DAO.Migrations
 
                     b.HasIndex("ProcessTypeId");
 
-                    b.HasIndex("Status", "WaitingOn");
+                    b.HasIndex("TenantId", "AssigneeId");
+
+                    b.HasIndex("TenantId", "ParentId");
+
+                    b.HasIndex("TenantId", "UpdatedAt");
+
+                    b.HasIndex("TenantId", "CustomerId", "UpdatedAt");
+
+                    b.HasIndex("TenantId", "Status", "ActiveStepDueAt");
+
+                    b.HasIndex("TenantId", "Status", "WaitingOn");
 
                     b.ToTable("Processes", (string)null);
                 });
@@ -309,7 +354,16 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.Property<Guid?>("StepId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
 
                     b.HasIndex("ProcessId", "StepId");
 
@@ -336,14 +390,72 @@ namespace BZ.Howly.Api.DAO.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name");
+                    b.HasIndex("TenantId", "Name");
 
                     b.ToTable("ProcessTypes", (string)null);
+                });
+
+            modelBuilder.Entity("BZ.Howly.Api.Core.Tenancy.Tenant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsPlatform")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(40)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Slug")
+                        .IsUnique();
+
+                    b.ToTable("Tenants", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("0e0a7c3e-5f2b-4c1d-9a00-000000000001"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 14, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsPlatform = true,
+                            Name = "Howly",
+                            Slug = "admin",
+                            Status = "Active"
+                        },
+                        new
+                        {
+                            Id = new Guid("0e0a7c3e-5f2b-4c1d-9a00-0000000000b1"),
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 14, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsPlatform = false,
+                            Name = "Bia Consultoria Ambiental",
+                            Slug = "bia",
+                            Status = "Active"
+                        });
                 });
 
             modelBuilder.Entity("BZ.Howly.Api.DAO.Identity.AppUser", b =>
@@ -356,9 +468,9 @@ namespace BZ.Howly.Api.DAO.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("AvatarKey")
-                        .HasMaxLength(100)
+                        .HasMaxLength(150)
                         .IsUnicode(false)
-                        .HasColumnType("varchar(100)");
+                        .HasColumnType("varchar(150)");
 
                     b.Property<DateTimeOffset?>("AvatarUpdatedAt")
                         .HasColumnType("datetimeoffset");
@@ -427,6 +539,9 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("bit");
 
@@ -439,7 +554,7 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
-                    b.HasIndex("NormalizedUserName")
+                    b.HasIndex("TenantId", "NormalizedUserName")
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
@@ -495,6 +610,13 @@ namespace BZ.Howly.Api.DAO.Migrations
                             ConcurrencyStamp = "6f0b1a52-0c1e-4d0a-9a3e-1b0c8f6a0003",
                             Name = "Customer",
                             NormalizedName = "CUSTOMER"
+                        },
+                        new
+                        {
+                            Id = new Guid("6f0b1a52-0c1e-4d0a-9a3e-1b0c8f6a0004"),
+                            ConcurrencyStamp = "6f0b1a52-0c1e-4d0a-9a3e-1b0c8f6a0004",
+                            Name = "PlatformAdmin",
+                            NormalizedName = "PLATFORMADMIN"
                         });
                 });
 
@@ -603,6 +725,12 @@ namespace BZ.Howly.Api.DAO.Migrations
 
             modelBuilder.Entity("BZ.Howly.Api.Core.Customers.Customer", b =>
                 {
+                    b.HasOne("BZ.Howly.Api.Core.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("BZ.Howly.Api.DAO.Identity.AppUser", null)
                         .WithOne()
                         .HasForeignKey("BZ.Howly.Api.Core.Customers.Customer", "UserId")
@@ -654,6 +782,12 @@ namespace BZ.Howly.Api.DAO.Migrations
 
             modelBuilder.Entity("BZ.Howly.Api.Core.Identity.RefreshToken", b =>
                 {
+                    b.HasOne("BZ.Howly.Api.Core.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("BZ.Howly.Api.DAO.Identity.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -663,6 +797,12 @@ namespace BZ.Howly.Api.DAO.Migrations
 
             modelBuilder.Entity("BZ.Howly.Api.Core.Identity.UserPreferences", b =>
                 {
+                    b.HasOne("BZ.Howly.Api.Core.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("BZ.Howly.Api.DAO.Identity.AppUser", null)
                         .WithOne()
                         .HasForeignKey("BZ.Howly.Api.Core.Identity.UserPreferences", "UserId")
@@ -675,7 +815,13 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.HasOne("BZ.Howly.Api.Core.Processes.Process", null)
                         .WithMany()
                         .HasForeignKey("ProcessId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BZ.Howly.Api.Core.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("BZ.Howly.Api.DAO.Identity.AppUser", null)
@@ -707,6 +853,12 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.HasOne("BZ.Howly.Api.Core.Processes.ProcessType", null)
                         .WithMany()
                         .HasForeignKey("ProcessTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BZ.Howly.Api.Core.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -751,7 +903,8 @@ namespace BZ.Howly.Api.DAO.Migrations
 
                             b1.HasKey("Id");
 
-                            b1.HasIndex("ProcessId");
+                            b1.HasIndex("ProcessId", "Sequence")
+                                .IsUnique();
 
                             b1.ToTable("ProcessEvents", (string)null);
 
@@ -802,6 +955,9 @@ namespace BZ.Howly.Api.DAO.Migrations
                                 .HasMaxLength(20)
                                 .HasColumnType("nvarchar(20)");
 
+                            b1.Property<long>("PausedFor")
+                                .HasColumnType("bigint");
+
                             b1.Property<int>("Position")
                                 .HasColumnType("int");
 
@@ -836,7 +992,13 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.HasOne("BZ.Howly.Api.Core.Processes.Process", null)
                         .WithMany()
                         .HasForeignKey("ProcessId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BZ.Howly.Api.Core.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.OwnsMany("BZ.Howly.Api.Core.Processes.DocumentVersion", "Versions", b1 =>
@@ -849,9 +1011,9 @@ namespace BZ.Howly.Api.DAO.Migrations
 
                             b1.Property<string>("FileKey")
                                 .IsRequired()
-                                .HasMaxLength(100)
+                                .HasMaxLength(150)
                                 .IsUnicode(false)
-                                .HasColumnType("varchar(100)");
+                                .HasColumnType("varchar(150)");
 
                             b1.Property<string>("FileName")
                                 .IsRequired()
@@ -893,7 +1055,8 @@ namespace BZ.Howly.Api.DAO.Migrations
 
                             b1.HasKey("Id");
 
-                            b1.HasIndex("DocumentId");
+                            b1.HasIndex("DocumentId", "Number")
+                                .IsUnique();
 
                             b1.ToTable("DocumentVersions", (string)null);
 
@@ -906,6 +1069,12 @@ namespace BZ.Howly.Api.DAO.Migrations
 
             modelBuilder.Entity("BZ.Howly.Api.Core.Processes.ProcessType", b =>
                 {
+                    b.HasOne("BZ.Howly.Api.Core.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.OwnsMany("BZ.Howly.Api.Core.Processes.StepTemplate", "Steps", b1 =>
                         {
                             b1.Property<Guid>("Id")
@@ -968,6 +1137,15 @@ namespace BZ.Howly.Api.DAO.Migrations
                         });
 
                     b.Navigation("Steps");
+                });
+
+            modelBuilder.Entity("BZ.Howly.Api.DAO.Identity.AppUser", b =>
+                {
+                    b.HasOne("BZ.Howly.Api.Core.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>

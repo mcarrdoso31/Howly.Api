@@ -280,5 +280,5 @@ public sealed class UserAccountStore(UserManager<AppUser> userManager, HowlyDbCo
 
     private static UserAccount ToAccount(AppUser user, IReadOnlyList<string> roles) => new(
         user.Id, user.UserName!, user.DisplayName, roles, user.MustChangePassword, user.IsActive, user.MustConfirmProfile,
-        user.Nickname, user.AvatarUpdatedAt?.ToUnixTimeMilliseconds().ToString());
+        user.Nickname, user.AvatarUpdatedAt?.ToUnixTimeMilliseconds().ToString(), user.TenantId);
 }

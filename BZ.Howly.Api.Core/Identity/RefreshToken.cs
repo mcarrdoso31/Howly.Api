@@ -1,3 +1,5 @@
+using BZ.Howly.Api.Core.Shared;
+
 namespace BZ.Howly.Api.Core.Identity;
 
 /// <summary>
@@ -19,9 +21,9 @@ public sealed class RefreshToken
 
     public static RefreshToken Issue(Guid userId, IssuedRefreshToken issued, DateTimeOffset now, Guid? familyId = null) => new()
     {
-        Id = Guid.NewGuid(),
+        Id = Ids.New(),
         UserId = userId,
-        FamilyId = familyId ?? Guid.NewGuid(),
+        FamilyId = familyId ?? Ids.New(),
         TokenHash = issued.Hash,
         CreatedAt = now,
         ExpiresAt = issued.ExpiresAt,

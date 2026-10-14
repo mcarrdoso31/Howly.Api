@@ -13,7 +13,8 @@ public sealed class RoleConfiguration : IEntityTypeConfiguration<IdentityRole<Gu
         builder.HasData(
             Role("6f0b1a52-0c1e-4d0a-9a3e-1b0c8f6a0001", Roles.Admin),
             Role("6f0b1a52-0c1e-4d0a-9a3e-1b0c8f6a0002", Roles.Analyst),
-            Role("6f0b1a52-0c1e-4d0a-9a3e-1b0c8f6a0003", Roles.Customer));
+            Role("6f0b1a52-0c1e-4d0a-9a3e-1b0c8f6a0003", Roles.Customer),
+            Role("6f0b1a52-0c1e-4d0a-9a3e-1b0c8f6a0004", Roles.PlatformAdmin));
     }
 
     private static IdentityRole<Guid> Role(string id, string name) => new()

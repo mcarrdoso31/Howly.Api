@@ -1,3 +1,5 @@
+using BZ.Howly.Api.Core.Shared;
+
 namespace BZ.Howly.Api.Core.Processes;
 
 public enum DocumentKind
@@ -49,7 +51,7 @@ public sealed class DocumentVersion
 
     internal static DocumentVersion Of(int number, StoredFile file, Actor actor, DateTimeOffset now, DocumentStatus status) => new()
     {
-        Id = Guid.NewGuid(),
+        Id = Ids.New(),
         Number = number,
         FileKey = file.Key,
         FileName = file.FileName,
@@ -204,7 +206,7 @@ public sealed class ProcessDocument
 
     private static ProcessDocument New(Guid processId, Guid? stepId, DocumentKind kind, string name, bool isRequired, int position) => new()
     {
-        Id = Guid.NewGuid(),
+        Id = Ids.New(),
         ProcessId = processId,
         StepId = stepId,
         Kind = kind,

@@ -1,3 +1,4 @@
+using BZ.Howly.Api.Core.Shared;
 using BZ.Howly.Api.Core.Shared.Exceptions;
 
 namespace BZ.Howly.Api.Core.Processes;
@@ -105,7 +106,7 @@ public sealed class ProcessStep
 
     internal static ProcessStep CopyOf(StepTemplate template) => new()
     {
-        Id = Guid.NewGuid(),
+        Id = Ids.New(),
         Position = template.Position,
         Name = template.Name,
         Description = template.Description,
@@ -183,7 +184,7 @@ public sealed class ProcessEvent
     internal static ProcessEvent Of(
         int sequence, ProcessEventType type, Actor actor, DateTimeOffset at, string? stepName = null, string? comment = null, string? details = null) => new()
     {
-        Id = Guid.NewGuid(),
+        Id = Ids.New(),
         Sequence = sequence,
         Type = type,
         StepName = stepName,

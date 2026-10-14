@@ -12,4 +12,7 @@ public static class JwtClaimTypes
 
     /// <summary>Present (value "true") while a new customer has not confirmed their data.</summary>
     public const string ProfileConfirmationRequired = "profile_confirmation_required";
+
+    /// <summary>The consultancy the token was issued in: it is only valid on that portal.</summary>
+    public const string Tenant = "tid";
 }

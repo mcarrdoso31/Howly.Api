@@ -39,14 +39,17 @@ public sealed class ProcessDocumentService(
         if (stored.Errors is not null)
             return OperationResult<ProcessResponse>.Invalid(stored.Errors);
 
-        var actor = await ActorAsync(actorId, cancellationToken);
-        var now = timeProvider.GetUtcNow();
-        var eventsBefore = process.Events.Count;
-        document.Upload(stored.File!, actor, now);
-        process.RecordDocumentEvent(document.Kind == DocumentKind.Deliverable ? ProcessEventType.DeliverablePublished : ProcessEventType.DocumentUploaded,
-            document.Name, actor, now);
-        await notificationService.NotifyAsync(process, eventsBefore, actorId, cancellationToken);
-        await processRepository.SaveChangesAsync(cancellationToken);
+        await SaveOrDiscardAsync(stored.File!, async () =>
+        {
+            var actor = await ActorAsync(actorId, cancellationToken);
+            var now = timeProvider.GetUtcNow();
+            var eventsBefore = process.Events.Count;
+            document.Upload(stored.File!, actor, now);
+            process.RecordDocumentEvent(document.Kind == DocumentKind.Deliverable ? ProcessEventType.DeliverablePublished : ProcessEventType.DocumentUploaded,
+                document.Name, actor, now);
+            await notificationService.NotifyAsync(process, eventsBefore, actorId, cancellationToken);
+            await processRepository.SaveChangesAsync(cancellationToken);
+        });
 
         return await ResponseAsync(processId, customerUserId, cancellationToken);
     }
@@ -68,19 +71,22 @@ public sealed class ProcessDocumentService(
         if (stored.Errors is not null)
             return OperationResult<ProcessResponse>.Invalid(stored.Errors);
 
-        var actor = await ActorAsync(actorId, cancellationToken);
-        var now = timeProvider.GetUtcNow();
-        // Staff deliverables added by hand belong to the step they are delivered in.
-        var document = kind == DocumentKind.Deliverable
-            ? ProcessDocument.Deliverable(processId, process.ActiveStep?.Id ?? process.Steps[^1].Id, name.Trim(), int.MaxValue)
-            : ProcessDocument.Extra(processId, name, actor, now);
-        document.Upload(stored.File!, actor, now);
-        await documentRepository.AddAsync(document, cancellationToken);
-        var eventsBefore = process.Events.Count;
-        process.RecordDocumentEvent(kind == DocumentKind.Deliverable ? ProcessEventType.DeliverablePublished : ProcessEventType.DocumentUploaded,
-            document.Name, actor, now);
-        await notificationService.NotifyAsync(process, eventsBefore, actorId, cancellationToken);
-        await processRepository.SaveChangesAsync(cancellationToken);
+        await SaveOrDiscardAsync(stored.File!, async () =>
+        {
+            var actor = await ActorAsync(actorId, cancellationToken);
+            var now = timeProvider.GetUtcNow();
+            // Staff deliverables added by hand belong to the step they are delivered in.
+            var document = kind == DocumentKind.Deliverable
+                ? ProcessDocument.Deliverable(processId, process.ActiveStep?.Id ?? process.Steps[^1].Id, name.Trim(), int.MaxValue)
+                : ProcessDocument.Extra(processId, name, actor, now);
+            document.Upload(stored.File!, actor, now);
+            await documentRepository.AddAsync(document, cancellationToken);
+            var eventsBefore = process.Events.Count;
+            process.RecordDocumentEvent(kind == DocumentKind.Deliverable ? ProcessEventType.DeliverablePublished : ProcessEventType.DocumentUploaded,
+                document.Name, actor, now);
+            await notificationService.NotifyAsync(process, eventsBefore, actorId, cancellationToken);
+            await processRepository.SaveChangesAsync(cancellationToken);
+        });
 
         return await ResponseAsync(processId, customerUserId, cancellationToken);
     }
@@ -173,6 +179,31 @@ public sealed class ProcessDocumentService(
     }
 
     private static Dictionary<string, string[]> FileError(string message) => new() { ["file"] = [message] };
+
+    /// <summary>
+    /// The database part of an upload. If it fails (a conflict, a rule, the database down), the file just stored is
+    /// removed: nothing in the storage without a version pointing to it.
+    /// </summary>
+    private async Task SaveOrDiscardAsync(StoredFile file, Func<Task> save)
+    {
+        try
+        {
+            await save();
+        }
+        catch
+        {
+            try
+            {
+                await fileStorage.DeleteAsync(file.Key, CancellationToken.None);
+            }
+            catch (Exception cleanup)
+            {
+                logger.LogWarning(cleanup, "Could not remove the file of a failed upload.");
+            }
+
+            throw;
+        }
+    }
 
     /// <summary>
     /// Checked before the file is stored: the staff send while the process is in progress; the customer only on their

@@ -226,7 +226,7 @@ public class NotificationEndpointsTests(HowlyApiFactory factory) : IClassFixture
     public async Task A_late_customer_step_is_told_to_the_customer_and_the_assignee_once()
     {
         var s = await ScenarioAsync(collectDays: 5);
-        using var scope = factory.Services.CreateScope();
+        using var scope = factory.CreateTenantScope();
         var overdue = scope.ServiceProvider.GetRequiredService<IOverdueStepService>();
 
         await overdue.NotifyOverdueAsync(DateTimeOffset.UtcNow.AddDays(6));

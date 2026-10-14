@@ -15,6 +15,7 @@ public sealed class AuthService(
     TimeProvider timeProvider) : IAuthService
 {
     private static readonly string[] CustomerRoles = [Roles.Customer];
+    private static readonly string[] PlatformRoles = [Roles.PlatformAdmin];
 
     public async Task<LoginResult> LoginCustomerAsync(CustomerLoginRequest request, CancellationToken cancellationToken = default)
     {
@@ -26,6 +27,9 @@ public sealed class AuthService(
 
     public Task<LoginResult> LoginInternalAsync(InternalLoginRequest request, CancellationToken cancellationToken = default) =>
         LoginAsync(request.Username?.Trim() ?? string.Empty, request.Password, Roles.Internal, cancellationToken);
+
+    public Task<LoginResult> LoginPlatformAsync(InternalLoginRequest request, CancellationToken cancellationToken = default) =>
+        LoginAsync(request.Username?.Trim() ?? string.Empty, request.Password, PlatformRoles, cancellationToken);
 
     public async Task<AuthSession?> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default)
     {

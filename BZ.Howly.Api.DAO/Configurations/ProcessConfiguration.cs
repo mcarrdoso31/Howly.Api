@@ -1,5 +1,6 @@
 using BZ.Howly.Api.Core.Customers;
 using BZ.Howly.Api.Core.Processes;
+using BZ.Howly.Api.DAO.Context;
 using BZ.Howly.Api.DAO.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -24,10 +25,15 @@ public sealed class ProcessConfiguration : IEntityTypeConfiguration<Process>
         builder.Property(p => p.Version).IsConcurrencyToken();
         builder.Ignore(p => p.ActiveStep);
 
-        builder.HasIndex(p => p.CustomerId);
-        builder.HasIndex(p => p.AssigneeId);
-        builder.HasIndex(p => p.ParentId);
-        builder.HasIndex(p => new { p.Status, p.WaitingOn });
+        // Every index starts with the tenant, like every query. Lists come newest first (also per customer, for the
+        // portal); the overdue job asks for in-progress processes by deadline.
+        const string tenant = HowlyDbContext.TenantIdProperty;
+        builder.HasIndex(tenant, nameof(Process.UpdatedAt));
+        builder.HasIndex(tenant, nameof(Process.CustomerId), nameof(Process.UpdatedAt));
+        builder.HasIndex(tenant, nameof(Process.AssigneeId));
+        builder.HasIndex(tenant, nameof(Process.ParentId));
+        builder.HasIndex(tenant, nameof(Process.Status), nameof(Process.WaitingOn));
+        builder.HasIndex(tenant, nameof(Process.Status), nameof(Process.ActiveStepDueAt));
 
         builder.HasOne<Customer>().WithMany().HasForeignKey(p => p.CustomerId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<ProcessType>().WithMany().HasForeignKey(p => p.ProcessTypeId).OnDelete(DeleteBehavior.Restrict);
