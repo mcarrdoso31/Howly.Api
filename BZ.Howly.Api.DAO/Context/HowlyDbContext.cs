@@ -38,6 +38,7 @@ public sealed class HowlyDbContext(DbContextOptions<HowlyDbContext> options, ITe
         typeof(HowlyDbContext).GetProperty(nameof(CurrentTenantId), BindingFlags.Instance | BindingFlags.NonPublic)!;
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
+    public DbSet<JobRun> JobRuns => Set<JobRun>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<UserPreferences> UserPreferences => Set<UserPreferences>();

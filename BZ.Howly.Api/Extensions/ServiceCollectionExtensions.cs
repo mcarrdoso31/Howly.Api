@@ -65,7 +65,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddHowlyTenancy(this IServiceCollection services)
     {
         services.AddOptions<TenancyOptions>().BindConfiguration(TenancyOptions.SectionName);
-        services.AddMemoryCache();
+        services.AddSingleton<TenantCache>();
         services.AddScoped<ITenantContext, TenantContext>();
         services.AddScoped<ITenantRepository, TenantRepository>();
 

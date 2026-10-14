@@ -39,6 +39,7 @@ public class HowlyApiFactory : WebApplicationFactory<Program>
             ["FileStorage:RootPath"] = _filesRoot,
             ["OverdueSteps:Enabled"] = "false", // tests call the check themselves, with the time they need
             ["Tenancy:FallbackSlug"] = TenantConfiguration.BiaSlug, // plain "localhost" clients work in the "bia" consultancy
+            ["Tenancy:NotFoundCacheDuration"] = "00:00:00", // a portal created by a test opens right away
         }));
 
         builder.ConfigureTestServices(services =>

@@ -455,6 +455,21 @@ namespace BZ.Howly.Api.DAO.Migrations
                         });
                 });
 
+            modelBuilder.Entity("BZ.Howly.Api.DAO.Context.JobRun", b =>
+                {
+                    b.Property<string>("Name")
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTimeOffset>("LastRunAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Name");
+
+                    b.ToTable("JobRuns", (string)null);
+                });
+
             modelBuilder.Entity("BZ.Howly.Api.DAO.Identity.AppUser", b =>
                 {
                     b.Property<Guid>("Id")

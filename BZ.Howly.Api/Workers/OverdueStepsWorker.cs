@@ -2,8 +2,8 @@ namespace BZ.Howly.Api.Workers;
 
 /// <summary>
 /// Checks for steps past their deadline when the API starts and then every <c>OverdueSteps:Interval</c> (1 hour by default).
-/// <c>OverdueSteps:Enabled = false</c> turns it off. Every instance runs this timer; the shared lock in
-/// <see cref="OverdueStepsRunner"/> makes each round happen once.
+/// <c>OverdueSteps:Enabled = false</c> turns it off. Every instance runs this timer; <see cref="OverdueStepsRunner"/>
+/// makes it one round per interval for all of them.
 /// </summary>
 public sealed class OverdueStepsWorker(
     OverdueStepsRunner runner,
@@ -29,7 +29,7 @@ public sealed class OverdueStepsWorker(
         {
             try
             {
-                await runner.RunOnceAsync(timeProvider.GetUtcNow(), stoppingToken);
+                await runner.RunOnceAsync(timeProvider.GetUtcNow(), interval, stoppingToken);
             }
             catch (Exception exception) when (!stoppingToken.IsCancellationRequested)
             {

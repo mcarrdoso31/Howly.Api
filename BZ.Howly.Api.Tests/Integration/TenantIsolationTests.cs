@@ -116,6 +116,18 @@ public class TenantIsolationTests(HowlyApiFactory factory) : IClassFixture<Howly
     }
 
     [Fact]
+    public async Task A_portal_created_after_a_miss_opens_once_the_short_miss_cache_expires()
+    {
+        var slug = NewSlug("late");
+        (await factory.CreatePortalClient(slug).GetAsync("/api/tenant")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        await factory.CreateTenantAsync(slug, "Chegou depois");
+
+        // The tests keep misses for no time at all; production keeps them for seconds, not minutes.
+        (await factory.CreatePortalClient(slug).GetAsync("/api/tenant")).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task The_health_check_needs_no_portal()
     {
         var response = await factory.CreatePortalClient("nobody-here").GetAsync("/health");
@@ -279,5 +291,25 @@ public class TenantIsolationTests(HowlyApiFactory factory) : IClassFixture<Howly
             .GetProperty("events").EnumerateArray().Last().GetProperty("type").GetString();
         (await LastEvent(bia, biaProcess)).Should().Be("StepOverdue");
         (await LastEvent(other, otherProcess)).Should().Be("StepOverdue");
+    }
+
+    [Fact]
+    public async Task The_overdue_check_runs_once_per_interval_whatever_the_number_of_instances()
+    {
+        var portal = await PortalAsync(NewSlug("round"));
+        var runner = factory.Services.GetRequiredService<OverdueStepsRunner>();
+        var interval = TimeSpan.FromHours(1);
+        var start = DateTimeOffset.UtcNow.AddDays(30); // after every round the other tests may have recorded
+        await runner.RunOnceAsync(start, interval);
+        var (_, processId, _) = await CreateProcessAsync(portal, (await CreateCustomerAsync(portal, NewCnpj())).GetProperty("id").GetGuid(), durationDays: 1);
+
+        // Another instance ticking a few minutes later: this interval's round already happened.
+        await runner.RunOnceAsync(start.AddMinutes(10), interval);
+        var events = (await (await portal.Client.SendAsync(HttpMethod.Get, $"/api/processes/{processId}", portal.StaffToken)).JsonAsync()).GetProperty("events");
+        events.EnumerateArray().Select(e => e.GetProperty("type").GetString()).Should().NotContain("StepOverdue");
+
+        await runner.RunOnceAsync(start.AddHours(1), interval);
+        events = (await (await portal.Client.SendAsync(HttpMethod.Get, $"/api/processes/{processId}", portal.StaffToken)).JsonAsync()).GetProperty("events");
+        events.EnumerateArray().Last().GetProperty("type").GetString().Should().Be("StepOverdue");
     }
 }

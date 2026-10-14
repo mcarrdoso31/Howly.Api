@@ -181,8 +181,9 @@ public sealed class ProcessDocumentService(
     private static Dictionary<string, string[]> FileError(string message) => new() { ["file"] = [message] };
 
     /// <summary>
-    /// The database part of an upload. If it fails (a conflict, a rule, the database down), the file just stored is
-    /// removed: nothing in the storage without a version pointing to it.
+    /// The database part of an upload. When it surely did not save (a rule, a conflict, invalid data), the file just
+    /// stored is removed. When the outcome is unknown (the connection dropped, maybe after the commit), the file is kept:
+    /// an orphan file is harmless, a saved version pointing to a deleted file is a lost document.
     /// </summary>
     private async Task SaveOrDiscardAsync(StoredFile file, Func<Task> save)
     {
@@ -190,7 +191,7 @@ public sealed class ProcessDocumentService(
         {
             await save();
         }
-        catch
+        catch (Exception exception) when (exception is HowlyException or ArgumentException)
         {
             try
             {

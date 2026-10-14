@@ -1,7 +1,6 @@
 using BZ.Howly.Api.Core.Interfaces.DAO;
 using BZ.Howly.Api.Core.Tenancy;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 
 namespace BZ.Howly.Api.Tenancy;
@@ -11,7 +10,7 @@ namespace BZ.Howly.Api.Tenancy;
 /// <see cref="ITenantContext"/> before anything reads data. Unknown portal: 404; suspended: 403. Stateless across
 /// instances: the only state is a short per-instance cache.
 /// </summary>
-public sealed class TenantResolutionMiddleware(RequestDelegate next, IMemoryCache cache, IOptions<TenancyOptions> options)
+public sealed class TenantResolutionMiddleware(RequestDelegate next, TenantCache cache, IOptions<TenancyOptions> options, IHostEnvironment environment)
 {
     /// <summary>Routes that are not part of a portal (health checks for the load balancer, the dev API description).</summary>
     private static readonly PathString[] TenantlessPaths = ["/health", "/openapi"];
@@ -24,7 +23,9 @@ public sealed class TenantResolutionMiddleware(RequestDelegate next, IMemoryCach
             return;
         }
 
-        var slug = SlugOf(context.Request.Host.Host, options.Value);
+        // The bare-domain fallback is a development convenience only.
+        var allowFallback = environment.IsDevelopment() || environment.IsEnvironment("Testing");
+        var slug = SlugOf(context.Request.Host.Host, options.Value, allowFallback);
         var tenant = slug is null ? null : await FindAsync(slug, tenants, context.RequestAborted);
         if (tenant is null)
         {
@@ -49,13 +50,13 @@ public sealed class TenantResolutionMiddleware(RequestDelegate next, IMemoryCach
     }
 
     /// <summary>The first label under a base domain; the fallback (dev/tests) for the bare base domain; else null.</summary>
-    public static string? SlugOf(string host, TenancyOptions options)
+    public static string? SlugOf(string host, TenancyOptions options, bool allowFallback)
     {
         host = host.Trim().TrimEnd('.').ToLowerInvariant();
         foreach (var baseDomain in options.BaseDomains.Select(d => d.Trim().ToLowerInvariant()))
         {
             if (host == baseDomain)
-                return string.IsNullOrWhiteSpace(options.FallbackSlug) ? null : options.FallbackSlug;
+                return allowFallback && !string.IsNullOrWhiteSpace(options.FallbackSlug) ? options.FallbackSlug : null;
 
             if (host.EndsWith("." + baseDomain, StringComparison.Ordinal))
             {
@@ -69,13 +70,12 @@ public sealed class TenantResolutionMiddleware(RequestDelegate next, IMemoryCach
 
     private async Task<Tenant?> FindAsync(string slug, ITenantRepository tenants, CancellationToken cancellationToken)
     {
-        var key = $"tenant:{slug}";
-        if (cache.TryGetValue(key, out Tenant? cached))
+        if (cache.TryGet(slug, out var cached))
             return cached;
 
         var tenant = await tenants.FindBySlugAsync(slug, cancellationToken);
-        // Unknown slugs are cached too, so a flood of random subdomains does not reach the database every time.
-        cache.Set(key, tenant, options.Value.CacheDuration);
+        // Unknown slugs are cached too (briefly), so a flood of random subdomains does not reach the database every time.
+        cache.Set(slug, tenant);
         return tenant;
     }
 

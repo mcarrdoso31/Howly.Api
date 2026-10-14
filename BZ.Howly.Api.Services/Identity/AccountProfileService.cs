@@ -103,8 +103,9 @@ public sealed class AccountProfileService(
         {
             await fileStorage.DeleteAsync(key, cancellationToken);
         }
-        catch (IOException exception)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            // Whatever the provider says (disk, blob service down…): the change is saved, so it is not an error.
             // The account already points to the new image; an orphan file is harmless.
             logger.LogWarning(exception, "Could not delete the old avatar {Key}.", key);
         }
