@@ -1,0 +1,128 @@
+using BZ.Howly.Api.Core.DTO.Request;
+using BZ.Howly.Api.Core.DTO.Response;
+using BZ.Howly.Api.Core.Identity;
+using BZ.Howly.Api.Core.Interfaces.DAO;
+using BZ.Howly.Api.Core.Interfaces.Service;
+using BZ.Howly.Api.Core.Interfaces.Storage;
+using BZ.Howly.Api.Core.Shared;
+using Microsoft.Extensions.Logging;
+
+namespace BZ.Howly.Api.Services.Identity;
+
+public sealed class AccountProfileService(
+    IUserAccountStore userAccountStore,
+    IFileStorage fileStorage,
+    TimeProvider timeProvider,
+    ILogger<AccountProfileService> logger) : IAccountProfileService
+{
+    private const string AvatarFolder = "avatars";
+
+    public async Task<OperationResult<AccountProfileResponse>> GetAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var profile = await userAccountStore.GetProfileAsync(userId, cancellationToken);
+        return profile is null ? OperationResult<AccountProfileResponse>.NotFound() : OperationResult<AccountProfileResponse>.Success(ToResponse(profile));
+    }
+
+    public async Task<OperationResult<AccountProfileResponse>> UpdateStaffAsync(
+        Guid userId, UpdateStaffProfileRequest request, CancellationToken cancellationToken = default)
+    {
+        var changes = new StaffProfileChanges(
+            request.DisplayName, request.Nickname, request.Email, request.Phone, request.SecondaryEmail, request.SecondaryPhone);
+
+        var errors = StaffProfileChanges.Validate(changes);
+        if (errors.Count > 0)
+            return OperationResult<AccountProfileResponse>.Invalid(errors);
+
+        if (!await userAccountStore.UpdateStaffProfileAsync(userId, changes.Normalize(), cancellationToken))
+            return OperationResult<AccountProfileResponse>.NotFound();
+
+        return await GetAsync(userId, cancellationToken);
+    }
+
+    public async Task<OperationResult<AccountProfileResponse>> SetAvatarAsync(Guid userId, Stream content, CancellationToken cancellationToken = default)
+    {
+        // Read at most one byte over the limit: enough to know the file is too big without loading all of it.
+        using var buffer = new MemoryStream();
+        await CopyAtMostAsync(content, buffer, IAccountProfileService.MaxAvatarBytes + 1, cancellationToken);
+        if (buffer.Length > IAccountProfileService.MaxAvatarBytes)
+            return OperationResult<AccountProfileResponse>.Invalid("file", "The image must have at most 2 MB.");
+
+        var format = ImageFormat.Detect(buffer.GetBuffer().AsSpan(0, (int)Math.Min(buffer.Length, ImageFormat.HeaderLength)));
+        if (format is null)
+            return OperationResult<AccountProfileResponse>.Invalid("file", "Only PNG, JPEG and WebP images are accepted.");
+
+        var profile = await userAccountStore.GetProfileAsync(userId, cancellationToken);
+        if (profile is null)
+            return OperationResult<AccountProfileResponse>.NotFound();
+
+        buffer.Position = 0;
+        var key = await fileStorage.SaveAsync(AvatarFolder, format.Extension, buffer, cancellationToken);
+        await userAccountStore.SetAvatarAsync(userId, key, timeProvider.GetUtcNow(), cancellationToken);
+        await DeleteQuietlyAsync(profile.AvatarKey, cancellationToken);
+
+        return await GetAsync(userId, cancellationToken);
+    }
+
+    public async Task<OperationResult<AccountProfileResponse>> RemoveAvatarAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var profile = await userAccountStore.GetProfileAsync(userId, cancellationToken);
+        if (profile is null)
+            return OperationResult<AccountProfileResponse>.NotFound();
+
+        await userAccountStore.SetAvatarAsync(userId, null, null, cancellationToken);
+        await DeleteQuietlyAsync(profile.AvatarKey, cancellationToken);
+
+        return await GetAsync(userId, cancellationToken);
+    }
+
+    public async Task<AvatarFile?> OpenAvatarAsync(Guid viewerId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var profile = await userAccountStore.GetProfileAsync(userId, cancellationToken);
+        if (profile?.AvatarKey is null || profile.AvatarVersion is null)
+            return null;
+
+        if (viewerId != userId && profile.Roles.Contains(Roles.Customer))
+        {
+            // A customer's logo is visible to the staff only, never to other customers.
+            var viewer = await userAccountStore.FindByIdAsync(viewerId, cancellationToken);
+            if (viewer is null || !viewer.HasAnyRole(Roles.Internal))
+                return null;
+        }
+
+        var format = ImageFormat.FromExtension(Path.GetExtension(profile.AvatarKey));
+        var stream = format is null ? null : await fileStorage.OpenReadAsync(profile.AvatarKey, cancellationToken);
+        return stream is null ? null : new AvatarFile(stream, format!.ContentType, profile.AvatarVersion);
+    }
+
+    private async Task DeleteQuietlyAsync(string? key, CancellationToken cancellationToken)
+    {
+        if (key is null)
+            return;
+
+        try
+        {
+            await fileStorage.DeleteAsync(key, cancellationToken);
+        }
+        catch (IOException exception)
+        {
+            // The account already points to the new image; an orphan file is harmless.
+            logger.LogWarning(exception, "Could not delete the old avatar {Key}.", key);
+        }
+    }
+
+    private static async Task CopyAtMostAsync(Stream source, Stream destination, long maxBytes, CancellationToken cancellationToken)
+    {
+        var chunk = new byte[81920];
+        long total = 0;
+        int read;
+        while (total < maxBytes && (read = await source.ReadAsync(chunk.AsMemory(0, (int)Math.Min(chunk.Length, maxBytes - total)), cancellationToken)) > 0)
+        {
+            await destination.WriteAsync(chunk.AsMemory(0, read), cancellationToken);
+            total += read;
+        }
+    }
+
+    private static AccountProfileResponse ToResponse(AccountProfile profile) => new(
+        profile.UserId, profile.Username, profile.DisplayName, profile.Nickname, profile.Email, profile.Phone,
+        profile.SecondaryEmail, profile.SecondaryPhone, profile.AvatarVersion);
+}

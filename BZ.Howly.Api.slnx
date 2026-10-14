@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="BZ.Howly.Api.Core/BZ.Howly.Api.Core.csproj" />
+  <Project Path="BZ.Howly.Api.DAO/BZ.Howly.Api.DAO.csproj" />
+  <Project Path="BZ.Howly.Api.Services/BZ.Howly.Api.Services.csproj" />
+  <Project Path="BZ.Howly.Api.Tests/BZ.Howly.Api.Tests.csproj" />
+  <Project Path="BZ.Howly.Api.Utils/BZ.Howly.Api.Utils.csproj" />
+  <Project Path="BZ.Howly.Api/BZ.Howly.Api.csproj" />
+</Solution>
