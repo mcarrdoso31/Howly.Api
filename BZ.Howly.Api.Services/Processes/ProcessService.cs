@@ -29,6 +29,9 @@ public sealed class ProcessService(
         return new PagedResponse<ProcessListItemResponse>(items, page, pageSize, total);
     }
 
+    public Task<ProcessSummaryResponse> SummarizeAsync(Guid? assigneeId, CancellationToken cancellationToken = default) =>
+        processRepository.SummarizeAsync(assigneeId, timeProvider.GetUtcNow(), cancellationToken);
+
     public async Task<OperationResult<ProcessResponse>> GetAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var process = await processRepository.FindByIdAsync(id, cancellationToken);

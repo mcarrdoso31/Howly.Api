@@ -26,6 +26,23 @@ public sealed class ProcessRepository(HowlyDbContext context) : IProcessReposito
             .Where(p => p.AssigneeId == assigneeId && (p.Status == ProcessStatus.InProgress || p.Status == ProcessStatus.Paused))
             .ToListAsync(cancellationToken);
 
+    public async Task<ProcessSummaryResponse> SummarizeAsync(Guid? assigneeId, DateTimeOffset now, CancellationToken cancellationToken = default)
+    {
+        // Paused, completed and cancelled processes wait on nobody: only in-progress ones count.
+        var open = context.Processes.Where(p => p.Status == ProcessStatus.InProgress && (assigneeId == null || p.AssigneeId == assigneeId));
+        var counts = await open
+            .GroupBy(_ => 1)
+            .Select(g => new ProcessSummaryResponse(
+                g.Count(),
+                g.Count(p => p.ActiveStepDueAt != null && p.ActiveStepDueAt < now),
+                g.Count(p => p.WaitingOn == StepOwner.Customer),
+                g.Count(p => p.WaitingOn == StepOwner.Staff),
+                g.Count(p => p.WaitingOn == StepOwner.Agency),
+                g.Count(p => p.WaitingOn == StepOwner.Payment)))
+            .SingleOrDefaultAsync(cancellationToken);
+        return counts ?? new ProcessSummaryResponse(0, 0, 0, 0, 0, 0);
+    }
+
     public Task<int> CountOpenSubprocessesAsync(Guid parentId, CancellationToken cancellationToken = default) =>
         context.Processes.CountAsync(
             p => p.ParentId == parentId && (p.Status == ProcessStatus.InProgress || p.Status == ProcessStatus.Paused), cancellationToken);

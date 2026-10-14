@@ -32,6 +32,12 @@ public sealed class ProcessesController(IProcessService processService, IProcess
         Ok(await processService.ListAsync(
             new ProcessListQuery(search, customerId, status, waitingOn, assigneeId, overdue, parentId, page, pageSize), cancellationToken));
 
+    /// <summary>The home page counts: open, late, and who they wait on. <paramref name="mine"/> keeps the caller's own.</summary>
+    [HttpGet("summary")]
+    [ProducesResponseType<ProcessSummaryResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Summary([FromQuery] bool mine = false, CancellationToken cancellationToken = default) =>
+        Ok(await processService.SummarizeAsync(mine ? this.CurrentUserId() : null, cancellationToken));
+
     [HttpGet("{id:guid}")]
     [ProducesResponseType<ProcessResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

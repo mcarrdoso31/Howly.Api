@@ -109,3 +109,7 @@ public sealed record ProcessEventResponse(
         new(e.Id, e.Type, e.StepName, e.Comment, e.Details, e.ActorName, e.At, seenByCustomer.TryGetValue(e.Id, out var seen) ? seen : null,
             e.ActorId == customerUserId);
 }
+
+/// <summary>The staff home page counts: open processes, the late ones and who each one waits on.</summary>
+public sealed record ProcessSummaryResponse(
+    int Open, int Overdue, int WaitingOnCustomer, int WaitingOnStaff, int WaitingOnAgency, int WaitingOnPayment);

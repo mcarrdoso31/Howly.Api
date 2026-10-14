@@ -9,6 +9,9 @@ namespace BZ.Howly.Api.Core.Interfaces.Service;
 public interface IProcessService
 {
     Task<PagedResponse<ProcessListItemResponse>> ListAsync(ProcessListQuery query, CancellationToken cancellationToken = default);
+
+    /// <summary>The home page counts, of <paramref name="assigneeId"/>'s processes when given.</summary>
+    Task<ProcessSummaryResponse> SummarizeAsync(Guid? assigneeId, CancellationToken cancellationToken = default);
     Task<OperationResult<ProcessResponse>> GetAsync(Guid id, CancellationToken cancellationToken = default);
     Task<OperationResult<ProcessResponse>> OpenAsync(OpenProcessRequest request, Guid actorId, CancellationToken cancellationToken = default);
 
