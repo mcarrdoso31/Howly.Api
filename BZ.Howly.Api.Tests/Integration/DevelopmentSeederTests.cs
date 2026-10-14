@@ -51,5 +51,8 @@ public class DevelopmentSeederTests(HowlyApiFactory factory) : IClassFixture<How
         var company = await client.SendAsync(HttpMethod.Get, "/api/me/company", customerToken);
         company.StatusCode.Should().Be(HttpStatusCode.OK, "the sample customer is a complete company, not a bare login");
         (await company.JsonAsync()).GetProperty("contacts").GetArrayLength().Should().BeGreaterThan(0);
+
+        var agencies = await (await client.SendAsync(HttpMethod.Get, "/api/agencies", analystToken)).JsonAsync();
+        agencies.EnumerateArray().Select(a => a.GetProperty("acronym").GetString()).Should().Contain(["IBAMA", "CETESB"]);
     }
 }

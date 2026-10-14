@@ -17,6 +17,7 @@ public sealed class ProcessService(
     IProcessTypeRepository processTypeRepository,
     ICustomerRepository customerRepository,
     IUserAccountStore userAccountStore,
+    IAgencyRepository agencyRepository,
     TimeProvider timeProvider) : IProcessService
 {
     public const int MaxPageSize = 100;
@@ -173,6 +174,17 @@ public sealed class ProcessService(
 
         return await ActAsync(id, actorId, "assigneeId",
             (process, actor, now) => process.Assign(assignee.Id, assignee.DisplayName, actor, now), cancellationToken);
+    }
+
+    public async Task<OperationResult<ProcessResponse>> SetStepAgencyAsync(
+        Guid id, Guid stepId, SetStepAgencyRequest request, Guid actorId, CancellationToken cancellationToken = default)
+    {
+        var agency = await agencyRepository.FindAsync(request.AgencyId, cancellationToken);
+        if (agency is not { IsActive: true })
+            return OperationResult<ProcessResponse>.Invalid("agencyId", "Choose an active agency of the catalog.");
+
+        return await ActAsync(id, actorId, "agencyId",
+            (process, actor, now) => process.SetStepAgency(stepId, agency.Id, agency.DisplayName, actor, now), cancellationToken);
     }
 
     public async Task<PagedResponse<ProcessListItemResponse>> ListForCustomerAsync(Guid userId, ProcessListQuery query, CancellationToken cancellationToken = default)

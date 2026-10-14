@@ -12,7 +12,7 @@ public sealed record ProcessTypeResponse(
         type.Id, type.Name, type.Description, type.IsActive,
         type.Steps.Select(s => new StepTemplateResponse(
             s.Id, s.Name, s.Description, s.Owner, s.AgencyName, s.DurationDays, s.IsOptional, s.CustomerChecklist, s.DeliveryChecklist,
-            s.Documents, s.Deliverables)).ToList(),
+            s.Documents, s.Deliverables, s.AgencyId)).ToList(),
         type.CreatedAt, type.UpdatedAt);
 }
 
@@ -27,4 +27,5 @@ public sealed record StepTemplateResponse(
     string? CustomerChecklist,
     string? DeliveryChecklist,
     IReadOnlyList<DocumentRequirement> Documents,
-    IReadOnlyList<string> Deliverables);
+    IReadOnlyList<string> Deliverables,
+    Guid? AgencyId);

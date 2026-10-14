@@ -93,11 +93,12 @@ public sealed record ProcessStepResponse(
     StepStatus Status,
     DateTimeOffset? StartedAt,
     DateTimeOffset? FinishedAt,
-    DateTimeOffset? DueAt)
+    DateTimeOffset? DueAt,
+    Guid? AgencyId)
 {
     public static ProcessStepResponse From(ProcessStep s) => new(
         s.Id, s.Name, s.Description, s.Owner, s.AgencyName, s.DurationDays, s.IsOptional, s.CustomerChecklist, s.DeliveryChecklist,
-        s.Status, s.StartedAt, s.FinishedAt, s.DueAt);
+        s.Status, s.StartedAt, s.FinishedAt, s.DueAt, s.AgencyId);
 }
 
 /// <param name="SeenByCustomerAt">When the customer read the notification of this event; null if unread or never notified.</param>

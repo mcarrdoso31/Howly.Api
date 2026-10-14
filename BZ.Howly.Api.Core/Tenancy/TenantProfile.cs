@@ -26,12 +26,6 @@ public sealed record TenantProfile(
 
     public static readonly TenantProfile Empty = new(null, null, null, null, null, null, null, null, DefaultTimeZone);
 
-    private static readonly HashSet<string> States =
-    [
-        "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ",
-        "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
-    ];
-
     /// <summary>
     /// Checks typed data and returns it normalized, or the errors keyed like the request body ("name", "cnpj"…).
     /// </summary>
@@ -79,7 +73,7 @@ public sealed record TenantProfile(
             errors["city"] = [$"The city must have at most {MaxCityLength} characters."];
 
         var cleanState = Text(state)?.ToUpperInvariant();
-        if (cleanState is not null && !States.Contains(cleanState))
+        if (cleanState is not null && !BrazilianStates.IsValid(cleanState))
             errors["state"] = ["State must be a Brazilian state code (SP, MG…)."];
 
         var cleanTimeZone = Text(timeZone) ?? DefaultTimeZone;

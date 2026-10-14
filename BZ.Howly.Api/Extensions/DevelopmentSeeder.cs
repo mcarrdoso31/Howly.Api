@@ -1,3 +1,4 @@
+using BZ.Howly.Api.Core.Agencies;
 using BZ.Howly.Api.Core.Customers;
 using BZ.Howly.Api.Core.Identity;
 using BZ.Howly.Api.Core.Interfaces.DAO;
@@ -39,6 +40,7 @@ public static class DevelopmentSeeder
             var admin = await SeedUserAsync(scope, config, "Admin", Roles.Admin, "Howly Admin");
             await SeedUserAsync(scope, config, "Analyst", Roles.Analyst, "Sample Analyst");
             await SeedCustomerAsync(scope, config, createdBy: admin?.Id ?? Guid.Empty);
+            await SeedAgenciesAsync(scope);
         });
 
         await InTenantAsync(services, Tenant.PlatformSlug, scope => SeedUserAsync(scope, config, "PlatformAdmin", Roles.PlatformAdmin, "Howly Platform"));
@@ -120,6 +122,25 @@ public static class DevelopmentSeeder
         await customers.AddAsync(Customer.Create(cnpj, companyName, contacts, user.Id, createdBy, DateTimeOffset.UtcNow));
         await customers.SaveChangesAsync();
         Logger(services).LogInformation("Seeded customer company {Company}.", companyName);
+    }
+
+    /// <summary>A few agencies to try the catalog and the agency steps with; only into an empty catalog.</summary>
+    private static async Task SeedAgenciesAsync(IServiceProvider services)
+    {
+        var agencies = services.GetRequiredService<IAgencyRepository>();
+        if ((await agencies.ListAsync(includeInactive: true)).Count > 0)
+            return;
+
+        AgencyDetails[] samples =
+        [
+            new("IBAMA", "Instituto Brasileiro do Meio Ambiente e dos Recursos Naturais Renováveis", AgencySphere.Federal, null, null, "https://www.gov.br/ibama", "SEI"),
+            new("CETESB", "Companhia Ambiental do Estado de São Paulo", AgencySphere.State, "SP", null, "https://cetesb.sp.gov.br", "e-ambiente"),
+            new("FEAM", "Fundação Estadual do Meio Ambiente", AgencySphere.State, "MG", null, "https://feam.br", "SLA"),
+        ];
+        foreach (var details in samples)
+            await agencies.AddAsync(Agency.Create(details, DateTimeOffset.UtcNow));
+        await agencies.SaveChangesAsync();
+        Logger(services).LogInformation("Seeded {Count} sample agencies.", samples.Length);
     }
 
     private static ILogger Logger(IServiceProvider services) =>

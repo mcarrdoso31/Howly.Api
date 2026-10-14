@@ -247,6 +247,27 @@ public sealed class Process
         Touch(now);
     }
 
+    /// <summary>
+    /// Sets the agency of an agency step that has not finished yet (e.g. this license is with FEAM, not CETESB). Only
+    /// while the process is in progress: a paused process is frozen and a finished one is history.
+    /// </summary>
+    public void SetStepAgency(Guid stepId, Guid agencyId, string agencyName, Actor actor, DateTimeOffset now)
+    {
+        if (Status != ProcessStatus.InProgress)
+            throw new ProcessRuleException("The agency of a step only changes while the process is in progress.");
+        var step = _steps.SingleOrDefault(s => s.Id == stepId) ?? throw new ProcessRuleException("The step is not part of this process.");
+        if (step.Owner != StepOwner.Agency)
+            throw new ProcessRuleException("Only agency steps have an agency.");
+        if (step.Status is not (StepStatus.Pending or StepStatus.Active))
+            throw new ProcessRuleException("A finished step keeps its agency.");
+        if (step.AgencyId == agencyId)
+            return;
+
+        step.SetAgency(agencyId, agencyName);
+        Record(ProcessEventType.StepAgencyChanged, actor, now, step.Name, details: agencyName);
+        Touch(now);
+    }
+
     /// <summary>A note on the timeline, while the process is open (paused included); closed once it is completed or cancelled.</summary>
     public void Comment(Actor actor, string? text, DateTimeOffset now)
     {

@@ -6,6 +6,7 @@ using BZ.Howly.Api.Core.Interfaces.DAO;
 using BZ.Howly.Api.Core.Interfaces.Service;
 using BZ.Howly.Api.Core.Interfaces.Storage;
 using BZ.Howly.Api.Core.Tenancy;
+using BZ.Howly.Api.Services.Agencies;
 using BZ.Howly.Api.DAO.Context;
 using BZ.Howly.Api.DAO.Identity;
 using BZ.Howly.Api.DAO.Repositories;
@@ -116,6 +117,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProcessDocumentRepository, ProcessDocumentRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IJobLock, DatabaseJobLock>();
+        services.AddScoped<IAgencyRepository, AgencyRepository>();
         services.AddSingleton<IPasswordGenerator, PasswordGenerator>();
 
         services.AddScoped<IAuthService, AuthService>();
@@ -130,6 +132,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IOverdueStepService, OverdueStepService>();
         services.AddScoped<ITenantProfileService, TenantProfileService>();
+        services.AddScoped<IAgencyService, AgencyService>();
 
         return services;
     }

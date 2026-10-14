@@ -245,7 +245,7 @@ public class ProcessRulesEndpointsTests(HowlyApiFactory factory) : IClassFixture
     // ---- process types ----
 
     [Fact]
-    public async Task Types_need_the_owner_and_the_agency_name()
+    public async Task Types_need_the_owner_but_not_the_agency()
     {
         var s = await ScenarioAsync();
 
@@ -253,8 +253,7 @@ public class ProcessRulesEndpointsTests(HowlyApiFactory factory) : IClassFixture
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var noAgency = await _client.SendAsync(HttpMethod.Post, "/api/process-types", s.StaffToken,
             new { name = "Sem órgão", steps = new[] { new { name = "Análise", owner = "Agency" } } });
-        noAgency.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await noAgency.JsonAsync()).GetProperty("errors").TryGetProperty("steps[0].agencyName", out _).Should().BeTrue();
+        noAgency.StatusCode.Should().Be(HttpStatusCode.Created, "each process can set the agency of the step");
     }
 
     // ---- concurrency ----

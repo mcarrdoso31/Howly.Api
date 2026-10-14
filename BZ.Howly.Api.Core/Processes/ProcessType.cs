@@ -56,8 +56,9 @@ public sealed class ProcessType
                 errors[$"{prefix}.description"] = [$"Description must have at most {MaxDescriptionLength} characters."];
             if (step.Owner is not { } owner || !Enum.IsDefined(owner))
                 errors[$"{prefix}.owner"] = ["Owner must be Customer, Staff, Agency or Payment."];
-            if (step.Owner == StepOwner.Agency && (string.IsNullOrWhiteSpace(step.AgencyName) || step.AgencyName.Trim().Length > MaxNameLength))
-                errors[$"{prefix}.agencyName"] = [$"Agency steps need the agency name, with at most {MaxNameLength} characters."];
+            // The agency can be left for each process to set: only its length is checked here.
+            if (step.Owner == StepOwner.Agency && step.AgencyName?.Trim().Length > MaxNameLength)
+                errors[$"{prefix}.agencyName"] = [$"Agency name must have at most {MaxNameLength} characters."];
             if (step.DurationDays is < 1 or > MaxDurationDays)
                 errors[$"{prefix}.durationDays"] = [$"Duration must be between 1 and {MaxDurationDays} days."];
             if (step.CustomerChecklist?.Trim().Length > MaxChecklistLength)

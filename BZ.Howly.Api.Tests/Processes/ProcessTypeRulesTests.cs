@@ -14,10 +14,10 @@ public class ProcessTypeRulesTests
         ProcessType.Validate("MTR", null, [Step(owner: null)]).Should().ContainKey("steps[0].owner");
 
     [Fact]
-    public void Agency_steps_need_the_agency_name()
+    public void Agency_steps_may_leave_the_agency_for_each_process()
     {
-        ProcessType.Validate("MTR", null, [Step("Análise", StepOwner.Agency)]).Should().ContainKey("steps[0].agencyName");
-        ProcessType.Validate("MTR", null, [Step("Análise", StepOwner.Agency, " ")]).Should().ContainKey("steps[0].agencyName");
+        ProcessType.Validate("MTR", null, [Step("Análise", StepOwner.Agency)]).Should().BeEmpty();
+        ProcessType.Validate("MTR", null, [Step("Análise", StepOwner.Agency, new string('x', 121))]).Should().ContainKey("steps[0].agencyName");
         ProcessType.Validate("MTR", null, [Step("Análise", StepOwner.Agency, "IBAMA")]).Should().BeEmpty();
     }
 

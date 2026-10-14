@@ -1,3 +1,4 @@
+using BZ.Howly.Api.Core.Agencies;
 using BZ.Howly.Api.Core.Customers;
 using BZ.Howly.Api.Core.Processes;
 using BZ.Howly.Api.DAO.Context;
@@ -51,6 +52,7 @@ public sealed class ProcessConfiguration : IEntityTypeConfiguration<Process>
             step.Property(s => s.Owner).HasConversion<string>().HasMaxLength(EnumLength);
             step.Property(s => s.Status).HasConversion<string>().HasMaxLength(EnumLength);
             step.Property(s => s.AgencyName).HasMaxLength(ProcessType.MaxNameLength);
+            step.HasOne<Agency>().WithMany().HasForeignKey(s => s.AgencyId).OnDelete(DeleteBehavior.Restrict);
             step.Property(s => s.CustomerChecklist).HasMaxLength(ProcessType.MaxChecklistLength);
             step.Property(s => s.DeliveryChecklist).HasMaxLength(ProcessType.MaxChecklistLength);
             step.Ignore(s => s.DueAt);

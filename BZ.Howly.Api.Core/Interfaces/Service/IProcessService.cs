@@ -22,6 +22,9 @@ public interface IProcessService
     Task<OperationResult<ProcessResponse>> ResumeAsync(Guid id, Guid actorId, CancellationToken cancellationToken = default);
     Task<OperationResult<ProcessResponse>> CancelAsync(Guid id, ProcessReasonRequest request, Guid actorId, CancellationToken cancellationToken = default);
     Task<OperationResult<ProcessResponse>> AssignAsync(Guid id, AssignProcessRequest request, Guid actorId, CancellationToken cancellationToken = default);
+
+    /// <summary>The agency of an agency step not finished yet (from the active agencies of the catalog).</summary>
+    Task<OperationResult<ProcessResponse>> SetStepAgencyAsync(Guid id, Guid stepId, SetStepAgencyRequest request, Guid actorId, CancellationToken cancellationToken = default);
     Task<OperationResult<ProcessResponse>> CommentAsync(Guid id, ProcessCommentRequest request, Guid actorId, CancellationToken cancellationToken = default);
 
     /// <summary>Fixes the title; the old one stays on the timeline.</summary>

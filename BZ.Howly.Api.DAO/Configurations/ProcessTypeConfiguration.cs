@@ -1,3 +1,4 @@
+using BZ.Howly.Api.Core.Agencies;
 using BZ.Howly.Api.Core.Processes;
 using BZ.Howly.Api.DAO.Context;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,7 @@ public sealed class ProcessTypeConfiguration : IEntityTypeConfiguration<ProcessT
             step.Property(s => s.Description).HasMaxLength(ProcessType.MaxDescriptionLength);
             step.Property(s => s.Owner).HasConversion<string>().HasMaxLength(20);
             step.Property(s => s.AgencyName).HasMaxLength(ProcessType.MaxNameLength);
+            step.HasOne<Agency>().WithMany().HasForeignKey(s => s.AgencyId).OnDelete(DeleteBehavior.Restrict);
             step.Property(s => s.CustomerChecklist).HasMaxLength(ProcessType.MaxChecklistLength);
             step.Property(s => s.DeliveryChecklist).HasMaxLength(ProcessType.MaxChecklistLength);
             // Small lists that always travel with the step: stored as JSON text on the step row.

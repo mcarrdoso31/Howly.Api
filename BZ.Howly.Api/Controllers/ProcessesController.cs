@@ -80,6 +80,14 @@ public sealed class ProcessesController(IProcessService processService, IProcess
     public async Task<IActionResult> Assign(Guid id, AssignProcessRequest request, CancellationToken cancellationToken) =>
         this.ToActionResult(await processService.AssignAsync(id, request, this.CurrentUserId(), cancellationToken), Ok);
 
+    /// <summary>Which agency an agency step is with (e.g. FEAM instead of the type's default CETESB), until it finishes.</summary>
+    [HttpPut("{id:guid}/steps/{stepId:guid}/agency")]
+    [ProducesResponseType<ProcessResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> SetStepAgency(Guid id, Guid stepId, SetStepAgencyRequest request, CancellationToken cancellationToken) =>
+        this.ToActionResult(await processService.SetStepAgencyAsync(id, stepId, request, this.CurrentUserId(), cancellationToken), Ok);
+
     // ---- documents ----
 
     /// <summary>A new version of a document (on behalf of the customer, or a deliverable).</summary>

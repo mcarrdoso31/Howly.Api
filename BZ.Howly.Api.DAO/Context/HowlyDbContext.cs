@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
+using BZ.Howly.Api.Core.Agencies;
 using BZ.Howly.Api.Core.Customers;
 using BZ.Howly.Api.Core.Identity;
 using BZ.Howly.Api.Core.Notifications;
@@ -30,7 +31,7 @@ public sealed class HowlyDbContext(DbContextOptions<HowlyDbContext> options, ITe
     /// </summary>
     private static readonly Type[] TenantOwnedTypes =
     [
-        typeof(AppUser), typeof(Customer), typeof(UserPreferences), typeof(RefreshToken),
+        typeof(AppUser), typeof(Customer), typeof(UserPreferences), typeof(RefreshToken), typeof(Agency),
         typeof(ProcessType), typeof(Process), typeof(ProcessDocument), typeof(Notification),
     ];
 
@@ -40,6 +41,7 @@ public sealed class HowlyDbContext(DbContextOptions<HowlyDbContext> options, ITe
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<JobRun> JobRuns => Set<JobRun>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<Agency> Agencies => Set<Agency>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<UserPreferences> UserPreferences => Set<UserPreferences>();
     public DbSet<ProcessType> ProcessTypes => Set<ProcessType>();

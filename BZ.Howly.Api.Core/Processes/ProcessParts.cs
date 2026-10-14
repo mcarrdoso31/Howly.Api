@@ -63,6 +63,9 @@ public enum ProcessEventType
     /// </summary>
     StepOverdue,
 
+    /// <summary>The agency of an agency step changed (the new one in the details).</summary>
+    StepAgencyChanged,
+
     /// <summary>The staff sent an approved document back to review.</summary>
     DocumentReopened,
 }
@@ -85,6 +88,10 @@ public sealed class ProcessStep
     public string Name { get; private set; } = string.Empty;
     public string? Description { get; private set; }
     public StepOwner Owner { get; private set; }
+    /// <summary>Agency steps: the agency, copied from the type and changeable while the step is not finished.</summary>
+    public Guid? AgencyId { get; private set; }
+
+    /// <summary>Its acronym at the time it was set: renaming the agency later does not rewrite the history.</summary>
     public string? AgencyName { get; private set; }
     public int? DurationDays { get; private set; }
     public bool IsOptional { get; private set; }
@@ -111,6 +118,7 @@ public sealed class ProcessStep
         Name = template.Name,
         Description = template.Description,
         Owner = template.Owner,
+        AgencyId = template.AgencyId,
         AgencyName = template.AgencyName,
         DurationDays = template.DurationDays,
         IsOptional = template.IsOptional,
@@ -131,6 +139,12 @@ public sealed class ProcessStep
     internal void MarkOverdueNotified(DateTimeOffset now) => OverdueNotifiedAt = now;
 
     internal void AddPause(TimeSpan paused) => PausedFor += paused;
+
+    internal void SetAgency(Guid agencyId, string agencyName)
+    {
+        AgencyId = agencyId;
+        AgencyName = agencyName;
+    }
 
     internal void Finish(StepStatus status, DateTimeOffset now)
     {

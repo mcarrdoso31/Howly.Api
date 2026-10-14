@@ -11,10 +11,11 @@ public sealed record ProcessTypeRequest(string? Name, string? Description, IRead
             ? new StepTemplateDetails(null, null, null, null, null, false, null, null, null, null)
             : new StepTemplateDetails(
                 s.Name, s.Description, s.Owner, s.AgencyName, s.DurationDays, s.IsOptional, s.CustomerChecklist, s.DeliveryChecklist,
-                s.Documents, s.Deliverables)).ToList() ?? [];
+                s.Documents, s.Deliverables, s.AgencyId)).ToList() ?? [];
 }
 
 /// <param name="Owner">Required: a missing owner is an error, never a silent "Customer".</param>
+/// <param name="AgencyId">Agency steps: the default agency (from the catalog); its acronym becomes the agency name.</param>
 public sealed record StepTemplateRequest(
     string? Name,
     string? Description,
@@ -25,4 +26,5 @@ public sealed record StepTemplateRequest(
     string? CustomerChecklist,
     string? DeliveryChecklist,
     IReadOnlyList<DocumentRequirement>? Documents,
-    IReadOnlyList<string>? Deliverables);
+    IReadOnlyList<string>? Deliverables,
+    Guid? AgencyId = null);
