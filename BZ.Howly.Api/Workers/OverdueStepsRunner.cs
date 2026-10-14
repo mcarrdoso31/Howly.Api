@@ -5,20 +5,24 @@ using BZ.Howly.Api.Core.Tenancy;
 namespace BZ.Howly.Api.Workers;
 
 /// <summary>
-/// One round of the overdue check: once across all instances (shared lock), going through every active consultancy in
-/// a scope of its own tenant. One consultancy failing does not stop the others.
+/// One round of the overdue check, going through every active consultancy in a scope of its own tenant (one failing
+/// does not stop the others). Coordinated across instances by <see cref="IJobLock"/>: one round at a time and, given
+/// the interval, one round per interval however many instances tick.
 /// </summary>
 public sealed class OverdueStepsRunner(IServiceScopeFactory scopeFactory, ILogger<OverdueStepsRunner> logger)
 {
     private const string LockName = "howly:overdue-steps";
 
-    public async Task RunOnceAsync(DateTimeOffset now, CancellationToken cancellationToken = default)
+    /// <param name="interval">The worker's interval; without it the round always runs (manual runs, tests).</param>
+    public async Task RunOnceAsync(DateTimeOffset now, TimeSpan? interval = null, CancellationToken cancellationToken = default)
     {
+        // A little under the interval: the timers of different instances drift, and a round should not be lost for seconds.
+        var minimumGap = interval * 0.9;
         await using var scope = scopeFactory.CreateAsyncScope();
-        await using var held = await scope.ServiceProvider.GetRequiredService<IJobLock>().TryAcquireAsync(LockName, cancellationToken);
+        await using var held = await scope.ServiceProvider.GetRequiredService<IJobLock>().TryStartRoundAsync(LockName, now, minimumGap, cancellationToken);
         if (held is null)
         {
-            logger.LogDebug("Overdue check skipped: another instance is running it.");
+            logger.LogDebug("Overdue check skipped: another instance is running it, or this interval's round already ran.");
             return;
         }
 

@@ -10,20 +10,53 @@ namespace BZ.Howly.Api.DAO.Repositories;
 /// <summary>
 /// On SQL Server, an application lock (<c>sp_getapplock</c>) held by a connection of its own: every instance shares the
 /// database, so it is shared by all of them, and it is released if the instance dies. Other providers (SQLite in the
-/// tests) run in a single process, where a local semaphore is enough.
+/// tests) run in a single process, where a local semaphore is enough. Under the lock, the <see cref="JobRun"/> row
+/// tells when the last round started, so N instances still make one round per interval.
 /// </summary>
 public sealed class DatabaseJobLock(HowlyDbContext context) : IJobLock
 {
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> LocalLocks = new();
 
-    public async Task<IAsyncDisposable?> TryAcquireAsync(string name, CancellationToken cancellationToken = default)
+    public async Task<IAsyncDisposable?> TryStartRoundAsync(
+        string name, DateTimeOffset now, TimeSpan? minimumGap = null, CancellationToken cancellationToken = default)
     {
-        if (!context.Database.IsSqlServer())
-        {
-            var local = LocalLocks.GetOrAdd(name, _ => new SemaphoreSlim(1, 1));
-            return await local.WaitAsync(0, cancellationToken) ? new Release(() => { local.Release(); return Task.CompletedTask; }) : null;
-        }
+        var held = context.Database.IsSqlServer()
+            ? await TryAcquireSqlServerAsync(name, cancellationToken)
+            : TryAcquireLocal(name);
+        if (held is null)
+            return null;
 
+        try
+        {
+            var run = await context.JobRuns.SingleOrDefaultAsync(r => r.Name == name, cancellationToken);
+            if (minimumGap is { } gap && run is not null && now - run.LastRunAt < gap)
+            {
+                await held.DisposeAsync(); // this interval's round already happened on some instance
+                return null;
+            }
+
+            if (run is null)
+                context.JobRuns.Add(new JobRun { Name = name, LastRunAt = now });
+            else
+                run.LastRunAt = now;
+            await context.SaveChangesAsync(cancellationToken);
+            return held;
+        }
+        catch
+        {
+            await held.DisposeAsync();
+            throw;
+        }
+    }
+
+    private static IAsyncDisposable? TryAcquireLocal(string name)
+    {
+        var local = LocalLocks.GetOrAdd(name, _ => new SemaphoreSlim(1, 1));
+        return local.Wait(0) ? new Release(() => { local.Release(); return Task.CompletedTask; }) : null;
+    }
+
+    private async Task<IAsyncDisposable?> TryAcquireSqlServerAsync(string name, CancellationToken cancellationToken)
+    {
         var connection = new SqlConnection(context.Database.GetConnectionString());
         try
         {
@@ -38,8 +71,15 @@ public sealed class DatabaseJobLock(HowlyDbContext context) : IJobLock
 
             return new Release(async () =>
             {
-                await ExecuteAsync(connection, "sp_releaseapplock", name, CancellationToken.None, new SqlParameter("@LockOwner", "Session"));
-                await connection.DisposeAsync();
+                try
+                {
+                    await ExecuteAsync(connection, "sp_releaseapplock", name, CancellationToken.None, new SqlParameter("@LockOwner", "Session"));
+                }
+                finally
+                {
+                    // Closing the session releases a session lock anyway: never leave it held by a forgotten connection.
+                    await connection.DisposeAsync();
+                }
             });
         }
         catch
