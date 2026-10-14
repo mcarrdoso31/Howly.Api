@@ -39,7 +39,39 @@ public sealed partial class Tenant
 
     public DateTimeOffset CreatedAt { get; private set; }
 
+    /// <summary>
+    /// What the consultancy tells about itself (legal name, CNPJ, contact, address, time zone). Kept in the same row:
+    /// the portal shows it everywhere and it changes rarely.
+    /// </summary>
+    public TenantProfile Profile { get; private set; } = TenantProfile.Empty;
+
+    /// <summary>Storage key of the logo; null without one.</summary>
+    public string? LogoKey { get; private set; }
+
+    public DateTimeOffset? LogoUpdatedAt { get; private set; }
+
+    /// <summary>Changes whenever the logo changes (clients use it to refresh their copy); null without one.</summary>
+    public string? LogoVersion => LogoUpdatedAt?.ToUnixTimeMilliseconds().ToString();
+
     private Tenant() { }
+
+    /// <summary>Renames the portal and replaces its profile, as normalized by <see cref="TenantProfile.Normalize"/>.</summary>
+    public void UpdateProfile(string name, TenantProfile profile)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > MaxNameLength)
+            throw new ArgumentException($"The name is required and must have at most {MaxNameLength} characters.", nameof(name));
+        Name = name.Trim();
+        Profile = profile;
+    }
+
+    /// <summary>Sets (or, with null, removes) the logo; the previous key is returned so its file can be deleted.</summary>
+    public string? SetLogo(string? key, DateTimeOffset now)
+    {
+        var previous = LogoKey;
+        LogoKey = key;
+        LogoUpdatedAt = key is null ? null : now;
+        return previous;
+    }
 
     [GeneratedRegex("^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$")]
     private static partial Regex SlugPattern();

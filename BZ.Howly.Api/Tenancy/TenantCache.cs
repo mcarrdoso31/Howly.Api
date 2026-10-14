@@ -21,5 +21,8 @@ public sealed class TenantCache(IOptions<TenancyOptions> options) : IDisposable
             _cache.Set(slug, tenant, new MemoryCacheEntryOptions { Size = 1, AbsoluteExpirationRelativeToNow = duration });
     }
 
+    /// <summary>Drops a portal, so the next request reads it again (e.g. after its name or logo changed).</summary>
+    public void Forget(string slug) => _cache.Remove(slug);
+
     public void Dispose() => _cache.Dispose();
 }

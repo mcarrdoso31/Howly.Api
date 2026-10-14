@@ -9,4 +9,9 @@ public interface ITenantRepository
 
     /// <summary>Active consultancies, the platform portal left out (e.g. for jobs that go through each one).</summary>
     Task<IReadOnlyList<Tenant>> ListActiveConsultanciesAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>The consultancy, tracked to be changed and saved with <see cref="SaveChangesAsync"/>.</summary>
+    Task<Tenant?> FindForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

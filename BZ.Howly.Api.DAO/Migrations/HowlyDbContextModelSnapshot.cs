@@ -411,6 +411,14 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.Property<bool>("IsPlatform")
                         .HasColumnType("bit");
 
+                    b.Property<string>("LogoKey")
+                        .HasMaxLength(150)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<DateTimeOffset?>("LogoUpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -1149,6 +1157,82 @@ namespace BZ.Howly.Api.DAO.Migrations
                         });
 
                     b.Navigation("Steps");
+                });
+
+            modelBuilder.Entity("BZ.Howly.Api.Core.Tenancy.Tenant", b =>
+                {
+                    b.OwnsOne("BZ.Howly.Api.Core.Tenancy.TenantProfile", "Profile", b1 =>
+                        {
+                            b1.Property<Guid>("TenantId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<string>("City")
+                                .HasMaxLength(100)
+                                .HasColumnType("nvarchar(100)");
+
+                            b1.Property<string>("Cnpj")
+                                .HasMaxLength(14)
+                                .IsUnicode(false)
+                                .HasColumnType("char(14)")
+                                .IsFixedLength();
+
+                            b1.Property<string>("Email")
+                                .HasMaxLength(256)
+                                .HasColumnType("nvarchar(256)");
+
+                            b1.Property<string>("LegalName")
+                                .HasMaxLength(200)
+                                .HasColumnType("nvarchar(200)");
+
+                            b1.Property<string>("Phone")
+                                .HasMaxLength(11)
+                                .IsUnicode(false)
+                                .HasColumnType("varchar(11)");
+
+                            b1.Property<string>("PostalCode")
+                                .HasMaxLength(8)
+                                .IsUnicode(false)
+                                .HasColumnType("char(8)")
+                                .IsFixedLength();
+
+                            b1.Property<string>("State")
+                                .HasMaxLength(2)
+                                .IsUnicode(false)
+                                .HasColumnType("char(2)")
+                                .IsFixedLength();
+
+                            b1.Property<string>("Street")
+                                .HasMaxLength(200)
+                                .HasColumnType("nvarchar(200)");
+
+                            b1.Property<string>("TimeZone")
+                                .IsRequired()
+                                .HasMaxLength(64)
+                                .IsUnicode(false)
+                                .HasColumnType("varchar(64)");
+
+                            b1.HasKey("TenantId");
+
+                            b1.ToTable("Tenants");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TenantId");
+
+                            b1.HasData(
+                                new
+                                {
+                                    TenantId = new Guid("0e0a7c3e-5f2b-4c1d-9a00-000000000001"),
+                                    TimeZone = "America/Sao_Paulo"
+                                },
+                                new
+                                {
+                                    TenantId = new Guid("0e0a7c3e-5f2b-4c1d-9a00-0000000000b1"),
+                                    TimeZone = "America/Sao_Paulo"
+                                });
+                        });
+
+                    b.Navigation("Profile")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("BZ.Howly.Api.DAO.Identity.AppUser", b =>

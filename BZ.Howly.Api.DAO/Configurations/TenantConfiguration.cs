@@ -25,6 +25,26 @@ public sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
         builder.HasIndex(t => t.Slug).IsUnique();
         builder.Property(t => t.Name).HasMaxLength(Tenant.MaxNameLength).IsRequired();
         builder.Property(t => t.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(t => t.LogoKey).HasMaxLength(150).IsUnicode(false);
+        builder.Ignore(t => t.LogoVersion);
+
+        // The profile lives in the tenant row itself (Profile_* columns): always read together, changed rarely.
+        builder.OwnsOne(t => t.Profile, profile =>
+        {
+            profile.Property(p => p.LegalName).HasMaxLength(TenantProfile.MaxLegalNameLength);
+            profile.Property(p => p.Cnpj).HasMaxLength(14).IsFixedLength().IsUnicode(false);
+            profile.Property(p => p.Email).HasMaxLength(TenantProfile.MaxEmailLength);
+            profile.Property(p => p.Phone).HasMaxLength(11).IsUnicode(false);
+            profile.Property(p => p.PostalCode).HasMaxLength(8).IsFixedLength().IsUnicode(false);
+            profile.Property(p => p.Street).HasMaxLength(TenantProfile.MaxStreetLength);
+            profile.Property(p => p.City).HasMaxLength(TenantProfile.MaxCityLength);
+            profile.Property(p => p.State).HasMaxLength(2).IsFixedLength().IsUnicode(false);
+            profile.Property(p => p.TimeZone).HasMaxLength(64).IsUnicode(false).IsRequired();
+            profile.HasData(
+                new { TenantId = PlatformId, TimeZone = TenantProfile.DefaultTimeZone },
+                new { TenantId = BiaId, TimeZone = TenantProfile.DefaultTimeZone });
+        });
+        builder.Navigation(t => t.Profile).IsRequired();
 
         builder.HasData(
             new { Id = PlatformId, Slug = Tenant.PlatformSlug, Name = "Howly", Status = TenantStatus.Active, IsPlatform = true, CreatedAt = SeededAt },

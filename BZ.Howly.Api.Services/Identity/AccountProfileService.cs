@@ -5,6 +5,7 @@ using BZ.Howly.Api.Core.Interfaces.DAO;
 using BZ.Howly.Api.Core.Interfaces.Service;
 using BZ.Howly.Api.Core.Interfaces.Storage;
 using BZ.Howly.Api.Core.Shared;
+using BZ.Howly.Api.Services.Shared;
 using Microsoft.Extensions.Logging;
 
 namespace BZ.Howly.Api.Services.Identity;
@@ -41,22 +42,16 @@ public sealed class AccountProfileService(
 
     public async Task<OperationResult<AccountProfileResponse>> SetAvatarAsync(Guid userId, Stream content, CancellationToken cancellationToken = default)
     {
-        // Read at most one byte over the limit: enough to know the file is too big without loading all of it.
-        using var buffer = new MemoryStream();
-        await CopyAtMostAsync(content, buffer, IAccountProfileService.MaxAvatarBytes + 1, cancellationToken);
-        if (buffer.Length > IAccountProfileService.MaxAvatarBytes)
-            return OperationResult<AccountProfileResponse>.Invalid("file", "The image must have at most 2 MB.");
-
-        var format = ImageFormat.Detect(buffer.GetBuffer().AsSpan(0, (int)Math.Min(buffer.Length, ImageFormat.HeaderLength)));
-        if (format is null)
-            return OperationResult<AccountProfileResponse>.Invalid("file", "Only PNG, JPEG and WebP images are accepted.");
+        var (image, format, error) = await Images.ReadAsync(content, IAccountProfileService.MaxAvatarBytes, cancellationToken);
+        if (error is not null)
+            return OperationResult<AccountProfileResponse>.Invalid("file", error);
+        using var buffer = image!;
 
         var profile = await userAccountStore.GetProfileAsync(userId, cancellationToken);
         if (profile is null)
             return OperationResult<AccountProfileResponse>.NotFound();
 
-        buffer.Position = 0;
-        var key = await fileStorage.SaveAsync(AvatarFolder, format.Extension, buffer, cancellationToken);
+        var key = await fileStorage.SaveAsync(AvatarFolder, format!.Extension, buffer, cancellationToken);
         await userAccountStore.SetAvatarAsync(userId, key, timeProvider.GetUtcNow(), cancellationToken);
         await DeleteQuietlyAsync(profile.AvatarKey, cancellationToken);
 
@@ -108,18 +103,6 @@ public sealed class AccountProfileService(
             // Whatever the provider says (disk, blob service down…): the change is saved, so it is not an error.
             // The account already points to the new image; an orphan file is harmless.
             logger.LogWarning(exception, "Could not delete the old avatar {Key}.", key);
-        }
-    }
-
-    private static async Task CopyAtMostAsync(Stream source, Stream destination, long maxBytes, CancellationToken cancellationToken)
-    {
-        var chunk = new byte[81920];
-        long total = 0;
-        int read;
-        while (total < maxBytes && (read = await source.ReadAsync(chunk.AsMemory(0, (int)Math.Min(chunk.Length, maxBytes - total)), cancellationToken)) > 0)
-        {
-            await destination.WriteAsync(chunk.AsMemory(0, read), cancellationToken);
-            total += read;
         }
     }
 

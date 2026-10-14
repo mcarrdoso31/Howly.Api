@@ -15,4 +15,9 @@ public sealed class TenantRepository(HowlyDbContext context) : ITenantRepository
             .Where(t => t.Status == TenantStatus.Active && !t.IsPlatform)
             .OrderBy(t => t.Slug)
             .ToListAsync(cancellationToken);
+
+    public Task<Tenant?> FindForUpdateAsync(Guid id, CancellationToken cancellationToken = default) =>
+        context.Tenants.SingleOrDefaultAsync(t => t.Id == id, cancellationToken);
+
+    public Task SaveChangesAsync(CancellationToken cancellationToken = default) => context.SaveChangesAsync(cancellationToken);
 }

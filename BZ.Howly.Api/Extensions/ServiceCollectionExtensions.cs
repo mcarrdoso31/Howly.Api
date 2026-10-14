@@ -13,6 +13,7 @@ using BZ.Howly.Api.Services.Customers;
 using BZ.Howly.Api.Services.Identity;
 using BZ.Howly.Api.Services.Notifications;
 using BZ.Howly.Api.Services.Processes;
+using BZ.Howly.Api.Services.Tenancy;
 using BZ.Howly.Api.Tenancy;
 using BZ.Howly.Api.Utils.Security;
 using BZ.Howly.Api.Utils.Storage;
@@ -128,6 +129,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProcessDocumentService, ProcessDocumentService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IOverdueStepService, OverdueStepService>();
+        services.AddScoped<ITenantProfileService, TenantProfileService>();
 
         return services;
     }
