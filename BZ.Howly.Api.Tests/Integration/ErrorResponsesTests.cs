@@ -63,7 +63,7 @@ public class ErrorResponsesTests(HowlyApiFactory factory) : IClassFixture<HowlyA
         // Another analyst signs in, then the account is removed while the access token is still valid.
         var username = NewUsername("gone");
         var goneToken = await StaffTokenAsync(username);
-        using (var scope = factory.Services.CreateScope())
+        using (var scope = factory.CreateTenantScope())
         {
             var users = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
             (await users.DeleteAsync((await users.FindByNameAsync(username))!)).Succeeded.Should().BeTrue();

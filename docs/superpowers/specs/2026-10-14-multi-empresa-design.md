@@ -31,7 +31,7 @@ a base para o portal de super admin fica pronta, sem telas.
   `HasQueryFilter(e => e.TenantId == CurrentTenantId)` em todas e carimba `TenantId` em `Added`; gravar sem tenant
   definido lança exceção.
 - Ignorar o filtro só em dois lugares explícitos: worker de prazos (um tenant por vez) e o futuro painel da plataforma.
-- Índices únicos passam a incluir `TenantId` (CNPJ, login, nome do tipo de processo). Todos os índices de busca
+- Índices únicos passam a incluir `TenantId` (CNPJ, login). Nome de tipo de processo continua não único (decisão de regra pendente). Todos os índices de busca
   começam por `TenantId`.
 - IDs sequenciais (amigáveis ao índice clusterizado do SQL Server) via um gerador único no Core.
 

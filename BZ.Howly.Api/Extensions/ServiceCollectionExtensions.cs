@@ -4,6 +4,8 @@ using BZ.Howly.Api.Authorization;
 using BZ.Howly.Api.Core.Identity;
 using BZ.Howly.Api.Core.Interfaces.DAO;
 using BZ.Howly.Api.Core.Interfaces.Service;
+using BZ.Howly.Api.Core.Interfaces.Storage;
+using BZ.Howly.Api.Core.Tenancy;
 using BZ.Howly.Api.DAO.Context;
 using BZ.Howly.Api.DAO.Identity;
 using BZ.Howly.Api.DAO.Repositories;
@@ -11,11 +13,12 @@ using BZ.Howly.Api.Services.Customers;
 using BZ.Howly.Api.Services.Identity;
 using BZ.Howly.Api.Services.Notifications;
 using BZ.Howly.Api.Services.Processes;
-using BZ.Howly.Api.Core.Interfaces.Storage;
+using BZ.Howly.Api.Tenancy;
 using BZ.Howly.Api.Utils.Security;
 using BZ.Howly.Api.Utils.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -30,7 +33,41 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddHowlyDatabase(this IServiceCollection services)
     {
         services.AddDbContext<HowlyDbContext>((provider, options) =>
-            options.UseSqlServer(provider.GetRequiredService<IConfiguration>().GetConnectionString("Howly")));
+            // Steps and timeline load in separate queries instead of one steps × events product.
+            options.UseSqlServer(
+                provider.GetRequiredService<IConfiguration>().GetConnectionString("Howly"),
+                sql => sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)));
+
+        return services;
+    }
+
+    /// <summary>
+    /// Behind a load balancer the request arrives from it: the original host (which names the portal), scheme and
+    /// client address come in X-Forwarded-* headers. Only trusted from loopback unless
+    /// <c>ForwardedHeaders:TrustAllProxies</c> is set (a cloud load balancer whose addresses are not fixed).
+    /// </summary>
+    public static IServiceCollection AddHowlyForwardedHeaders(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
+            if (configuration.GetValue("ForwardedHeaders:TrustAllProxies", false))
+            {
+                options.KnownIPNetworks.Clear();
+                options.KnownProxies.Clear();
+            }
+        });
+
+        return services;
+    }
+
+    /// <summary>The consultancy of each request, found from its subdomain (see <see cref="TenantResolutionMiddleware"/>).</summary>
+    public static IServiceCollection AddHowlyTenancy(this IServiceCollection services)
+    {
+        services.AddOptions<TenancyOptions>().BindConfiguration(TenancyOptions.SectionName);
+        services.AddMemoryCache();
+        services.AddScoped<ITenantContext, TenantContext>();
+        services.AddScoped<ITenantRepository, TenantRepository>();
 
         return services;
     }
@@ -41,7 +78,17 @@ public static class ServiceCollectionExtensions
             .BindConfiguration(FileStorageOptions.SectionName)
             .PostConfigure<IHostEnvironment>((options, environment) =>
                 options.RootPath = Path.GetFullPath(Path.Combine(environment.ContentRootPath, options.RootPath)));
-        services.AddSingleton<IFileStorage, DiskFileStorage>();
+        // The provider is a setting (Disk in development, AzureBlob with several instances); the use cases see it
+        // through TenantFileStorage, which keeps each consultancy in its own folder.
+        services.AddSingleton<DiskFileStorage>();
+        services.AddSingleton<AzureBlobFileStorage>();
+        services.AddScoped<IFileStorage>(provider =>
+        {
+            IFileStorage inner = provider.GetRequiredService<IOptions<FileStorageOptions>>().Value.Provider == FileStorageProvider.AzureBlob
+                ? provider.GetRequiredService<AzureBlobFileStorage>()
+                : provider.GetRequiredService<DiskFileStorage>();
+            return new TenantFileStorage(inner, provider.GetRequiredService<ITenantContext>());
+        });
 
         return services;
     }
@@ -67,6 +114,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProcessRepository, ProcessRepository>();
         services.AddScoped<IProcessDocumentRepository, ProcessDocumentRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<IJobLock, DatabaseJobLock>();
         services.AddSingleton<IPasswordGenerator, PasswordGenerator>();
 
         services.AddScoped<IAuthService, AuthService>();
@@ -126,8 +174,9 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Rejects the token (401, so the front refreshes or signs out) when its account was deactivated or its roles changed
-    /// since it was issued. The refresh then issues a token with the current roles, or fails for an inactive account.
+    /// Rejects the token (401, so the front refreshes or signs out) when it was issued in another consultancy than the
+    /// portal being used, or when its account was deactivated or its roles changed since it was issued. The refresh
+    /// then issues a token with the current roles, or fails for an inactive account.
     /// </summary>
     private static async Task AccountStillMatchesAsync(TokenValidatedContext context)
     {
@@ -135,6 +184,13 @@ public static class ServiceCollectionExtensions
         if (!Guid.TryParse(subject, out var userId))
         {
             context.Fail("Token without a subject.");
+            return;
+        }
+
+        var portal = context.HttpContext.RequestServices.GetRequiredService<ITenantContext>().TenantId;
+        if (!Guid.TryParse(context.Principal!.FindFirst(JwtClaimTypes.Tenant)?.Value, out var tokenTenant) || tokenTenant != portal)
+        {
+            context.Fail("The token belongs to another portal.");
             return;
         }
 
@@ -159,7 +215,8 @@ public static class ServiceCollectionExtensions
                     .GetValue("RateLimiting:Login:PermitLimit", 10);
 
                 return RateLimitPartition.GetFixedWindowLimiter(
-                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    // Per consultancy and address: one portal under attack does not lock the others out.
+                    $"{context.RequestServices.GetRequiredService<ITenantContext>().TenantId}:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
                     _ => new FixedWindowRateLimiterOptions { PermitLimit = permitLimit, Window = TimeSpan.FromMinutes(1) });
             });
         });

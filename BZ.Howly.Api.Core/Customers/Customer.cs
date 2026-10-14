@@ -73,7 +73,7 @@ public sealed class Customer
     {
         var customer = new Customer
         {
-            Id = Guid.NewGuid(),
+            Id = Ids.New(),
             Cnpj = cnpj,
             UserId = userId,
             CreatedBy = createdBy,

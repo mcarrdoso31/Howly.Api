@@ -1,3 +1,5 @@
+using BZ.Howly.Api.Core.Shared;
+
 namespace BZ.Howly.Api.Core.Processes;
 
 /// <summary>
@@ -89,7 +91,7 @@ public sealed class ProcessType
 
     public static ProcessType Create(string name, string? description, IReadOnlyList<StepTemplateDetails> steps, DateTimeOffset now)
     {
-        var type = new ProcessType { Id = Guid.NewGuid(), IsActive = true, CreatedAt = now };
+        var type = new ProcessType { Id = Ids.New(), IsActive = true, CreatedAt = now };
         type.Update(name, description, steps, now);
         return type;
     }

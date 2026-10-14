@@ -1,7 +1,9 @@
 using System.Text.Json.Serialization;
 using BZ.Howly.Api.Authorization;
+using BZ.Howly.Api.DAO.Context;
 using BZ.Howly.Api.ErrorHandling;
 using BZ.Howly.Api.Extensions;
+using BZ.Howly.Api.Tenancy;
 using BZ.Howly.Api.Workers;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,6 +25,8 @@ builder.Services.AddExceptionHandler<UnexpectedExceptionHandler>();
 builder.Services.AddOpenApi();
 
 builder.Services
+    .AddHowlyForwardedHeaders(builder.Configuration)
+    .AddHowlyTenancy()
     .AddHowlyDatabase()
     .AddHowlyIdentity()
     .AddHowlyFileStorage()
@@ -30,10 +34,15 @@ builder.Services
     .AddHowlyRateLimiting()
     .AddHowlyCors();
 
+// For the load balancer: an instance whose database is unreachable is taken out of rotation.
+builder.Services.AddHealthChecks().AddDbContextCheck<HowlyDbContext>();
+builder.Services.AddSingleton<OverdueStepsRunner>();
 builder.Services.AddHostedService<OverdueStepsWorker>();
 
 var app = builder.Build();
 
+// First: behind a load balancer, the real host (which names the portal), scheme and client address.
+app.UseForwardedHeaders();
 // In every environment, so the client never gets an HTML error page.
 app.UseExceptionHandler();
 // Error responses without a body (404 of an unknown route, 405, the 401 of the bearer challenge) get problem details too.
@@ -42,6 +51,7 @@ app.UseStatusCodePages();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    // Production applies migrations as a deploy step (migration bundle): N instances starting together must not race.
     await app.SeedDevelopmentDataAsync();
 }
 else
@@ -50,11 +60,14 @@ else
 }
 
 app.UseHttpsRedirection();
+// Before anything reads data: which consultancy this request belongs to.
+app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 
+app.MapHealthChecks("/health");
 app.MapControllers();
 
 app.Run();

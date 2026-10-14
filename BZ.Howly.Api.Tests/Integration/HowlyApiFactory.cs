@@ -1,3 +1,5 @@
+using BZ.Howly.Api.Core.Tenancy;
+using BZ.Howly.Api.DAO.Configurations;
 using BZ.Howly.Api.DAO.Context;
 using BZ.Howly.Api.DAO.Identity;
 using Microsoft.AspNetCore.Hosting;
@@ -20,6 +22,9 @@ public class HowlyApiFactory : WebApplicationFactory<Program>
 
     protected virtual int LoginPermitLimit => 1000;
 
+    /// <summary>Where the stored files land (one folder per consultancy inside).</summary>
+    public string FilesRoot => _filesRoot;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -33,6 +38,7 @@ public class HowlyApiFactory : WebApplicationFactory<Program>
             ["RateLimiting:Login:PermitLimit"] = LoginPermitLimit.ToString(),
             ["FileStorage:RootPath"] = _filesRoot,
             ["OverdueSteps:Enabled"] = "false", // tests call the check themselves, with the time they need
+            ["Tenancy:FallbackSlug"] = TenantConfiguration.BiaSlug, // plain "localhost" clients work in the "bia" consultancy
         }));
 
         builder.ConfigureTestServices(services =>
@@ -48,13 +54,53 @@ public class HowlyApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureClient(HttpClient client)
     {
         base.ConfigureClient(client);
+        EnsureDatabase();
+    }
+
+    /// <summary>The schema (with the seeded tenants) exists before any client or helper touches it.</summary>
+    private void EnsureDatabase()
+    {
         using var scope = Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<HowlyDbContext>().Database.EnsureCreated();
     }
 
-    public async Task<Guid> CreateUserAsync(string username, string password, string displayName, params string[] roles)
+    /// <summary>A client for another portal (<c>{slug}.localhost</c>); the plain clients use the "bia" consultancy.</summary>
+    public HttpClient CreatePortalClient(string slug)
     {
+        var client = CreateClient(new() { HandleCookies = false, BaseAddress = new Uri($"http://{slug}.localhost") });
+        return client;
+    }
+
+    /// <summary>A consultancy of its own, for the isolation tests (the database seeds only "bia" and the platform).</summary>
+    public async Task<Tenant> CreateTenantAsync(string slug, string name, TenantStatus status = TenantStatus.Active)
+    {
+        EnsureDatabase();
         using var scope = Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<HowlyDbContext>();
+        var tenant = Tenant.Create(Guid.NewGuid(), slug, name, DateTimeOffset.UtcNow);
+        if (status == TenantStatus.Suspended)
+            tenant.Suspend();
+        context.Tenants.Add(tenant);
+        await context.SaveChangesAsync();
+        return tenant;
+    }
+
+    /// <summary>A service scope working inside a consultancy, like a request to its portal would.</summary>
+    public IServiceScope CreateTenantScope(string slug = TenantConfiguration.BiaSlug)
+    {
+        EnsureDatabase();
+        var scope = Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<HowlyDbContext>();
+        scope.ServiceProvider.GetRequiredService<ITenantContext>().Set(context.Tenants.AsNoTracking().Single(t => t.Slug == slug));
+        return scope;
+    }
+
+    public Task<Guid> CreateUserAsync(string username, string password, string displayName, params string[] roles) =>
+        CreateUserInAsync(TenantConfiguration.BiaSlug, username, password, displayName, roles);
+
+    public async Task<Guid> CreateUserInAsync(string tenantSlug, string username, string password, string displayName, params string[] roles)
+    {
+        using var scope = CreateTenantScope(tenantSlug);
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
 
         var user = new AppUser { UserName = username, DisplayName = displayName };

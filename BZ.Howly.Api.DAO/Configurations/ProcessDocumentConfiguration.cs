@@ -21,7 +21,8 @@ public sealed class ProcessDocumentConfiguration : IEntityTypeConfiguration<Proc
         builder.Ignore(d => d.LatestVersion);
         builder.Ignore(d => d.IsPending);
         builder.HasIndex(d => new { d.ProcessId, d.StepId });
-        builder.HasOne<Process>().WithMany().HasForeignKey(d => d.ProcessId).OnDelete(DeleteBehavior.Cascade);
+        // The documents of a process are part of its history: never deleted along with it.
+        builder.HasOne<Process>().WithMany().HasForeignKey(d => d.ProcessId).OnDelete(DeleteBehavior.Restrict);
 
         builder.OwnsMany(d => d.Versions, version =>
         {
@@ -29,7 +30,7 @@ public sealed class ProcessDocumentConfiguration : IEntityTypeConfiguration<Proc
             version.WithOwner().HasForeignKey("DocumentId");
             version.HasKey(v => v.Id);
             version.Property(v => v.Id).ValueGeneratedNever();
-            version.Property(v => v.FileKey).HasMaxLength(100).IsUnicode(false).IsRequired();
+            version.Property(v => v.FileKey).HasMaxLength(150).IsUnicode(false).IsRequired();
             version.Property(v => v.FileName).HasMaxLength(UploadPolicy.MaxFileNameLength).IsRequired();
             version.Property(v => v.UploadedByName).HasMaxLength(200).IsRequired();
             version.Property(v => v.Status).HasConversion<string>().HasMaxLength(EnumLength);

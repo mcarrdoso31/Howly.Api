@@ -41,6 +41,7 @@ public sealed class JwtTokenService : ITokenService
             new(JwtClaimTypes.Subject, user.Id.ToString()),
             new(JwtClaimTypes.Name, user.DisplayName),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(JwtClaimTypes.Tenant, user.TenantId.ToString()),
         };
         claims.AddRange(user.Roles.Select(role => new Claim(JwtClaimTypes.Role, role)));
         if (user.MustChangePassword)

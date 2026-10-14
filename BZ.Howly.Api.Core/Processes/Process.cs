@@ -1,3 +1,5 @@
+using BZ.Howly.Api.Core.Shared;
+
 namespace BZ.Howly.Api.Core.Processes;
 
 /// <summary>
@@ -75,7 +77,7 @@ public sealed class Process
 
         var process = new Process
         {
-            Id = Guid.NewGuid(),
+            Id = Ids.New(),
             CustomerId = customerId,
             ProcessTypeId = type.Id,
             ProcessTypeName = type.Name,

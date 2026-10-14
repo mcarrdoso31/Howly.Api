@@ -3,7 +3,9 @@ using BZ.Howly.Api.Core.DTO.Request;
 using BZ.Howly.Api.Core.DTO.Response;
 using BZ.Howly.Api.Core.Identity;
 using BZ.Howly.Api.Core.Interfaces.Service;
+using BZ.Howly.Api.Core.Tenancy;
 using BZ.Howly.Api.Extensions;
+using BZ.Howly.Api.Tenancy;
 using BZ.Howly.Api.Utils.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,9 +16,10 @@ namespace BZ.Howly.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
+[AllowOnPlatform]
 [AllowPendingPasswordChange]
 [AllowPendingProfileConfirmation]
-public sealed class AuthController(IAuthService authService, IOptions<RefreshCookieOptions> cookieOptions) : ControllerBase
+public sealed class AuthController(IAuthService authService, ITenantContext tenantContext, IOptions<RefreshCookieOptions> cookieOptions) : ControllerBase
 {
     private RefreshCookieOptions Cookie => cookieOptions.Value;
 
@@ -36,7 +39,10 @@ public sealed class AuthController(IAuthService authService, IOptions<RefreshCoo
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> LoginInternal(InternalLoginRequest request, CancellationToken cancellationToken) =>
-        ToLoginResponse(await authService.LoginInternalAsync(request, cancellationToken));
+        // The platform portal signs in its owners; a consultancy portal, its staff.
+        ToLoginResponse(tenantContext.Tenant!.IsPlatform
+            ? await authService.LoginPlatformAsync(request, cancellationToken)
+            : await authService.LoginInternalAsync(request, cancellationToken));
 
     [HttpPost("refresh")]
     [AllowAnonymous]

@@ -1,4 +1,5 @@
 using BZ.Howly.Api.Core.Processes;
+using BZ.Howly.Api.Core.Shared;
 
 namespace BZ.Howly.Api.Core.Notifications;
 
@@ -38,7 +39,7 @@ public sealed class Notification
 
     public static Notification For(Guid userId, Process process, ProcessEvent processEvent) => new()
     {
-        Id = Guid.NewGuid(),
+        Id = Ids.New(),
         UserId = userId,
         ProcessId = process.Id,
         ProcessTitle = process.Title,

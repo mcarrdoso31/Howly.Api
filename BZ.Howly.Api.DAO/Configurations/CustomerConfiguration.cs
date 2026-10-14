@@ -1,5 +1,6 @@
 using BZ.Howly.Api.Core.Customers;
 using BZ.Howly.Api.Core.Shared;
+using BZ.Howly.Api.DAO.Context;
 using BZ.Howly.Api.DAO.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -20,7 +21,8 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
             .IsFixedLength()
             .IsUnicode(false)
             .IsRequired();
-        builder.HasIndex(c => c.Cnpj).IsUnique();
+        // A CNPJ is unique per consultancy: the same company can be a customer of several of them.
+        builder.HasIndex(HowlyDbContext.TenantIdProperty, nameof(Customer.Cnpj)).IsUnique();
 
         builder.Property(c => c.CompanyName).HasMaxLength(Customer.MaxNameLength).IsRequired();
         builder.Property(c => c.TradeName).HasMaxLength(Customer.MaxNameLength);
