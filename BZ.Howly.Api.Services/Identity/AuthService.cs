@@ -19,10 +19,10 @@ public sealed class AuthService(
 
     public async Task<LoginResult> LoginCustomerAsync(CustomerLoginRequest request, CancellationToken cancellationToken = default)
     {
-        if (!Cnpj.TryParse(request.Cnpj, out var cnpj))
+        if (!TaxId.TryParse(request.Document, out var document))
             return LoginResult.InvalidCredentials;
 
-        return await LoginAsync(cnpj!.Value, request.Password, CustomerRoles, cancellationToken);
+        return await LoginAsync(document!.Value, request.Password, CustomerRoles, cancellationToken);
     }
 
     public Task<LoginResult> LoginInternalAsync(InternalLoginRequest request, CancellationToken cancellationToken = default) =>
@@ -106,7 +106,7 @@ public sealed class AuthService(
         if (passwordCheck != PasswordCheckResult.Success)
             return LoginResult.InvalidCredentials;
 
-        // Checked only after the password, so an inactive account is not revealed to someone guessing CNPJs.
+        // Checked only after the password, so an inactive account is not revealed to someone guessing CPFs or CNPJs.
         if (!user.IsActive)
             return LoginResult.AccountInactive;
 

@@ -95,7 +95,7 @@ public class DocumentExampleEndpointsTests(HowlyApiFactory factory) : IClassFixt
 
         var contacts = new[] { new { name = "Bia", email = "bia@beagle.example", phone = "(11) 91234-5678", receivesNotices = true } };
         var cnpj = NewCnpj();
-        var customer = await (await _client.SendAsync(HttpMethod.Post, "/api/customers", staff, new { cnpj, companyName = "Beagle Industrial Ltda", contacts })).JsonAsync();
+        var customer = await (await _client.SendAsync(HttpMethod.Post, "/api/customers", staff, new { document = cnpj, companyName = "Beagle Industrial Ltda", contacts })).JsonAsync();
         var temporary = customer.GetProperty("temporaryPassword").GetString()!;
         var pending = (await _client.LoginCustomerAsync(cnpj, temporary)).GetProperty("accessToken").GetString();
         var changed = await (await _client.SendAsync(HttpMethod.Post, "/api/auth/change-password", pending, new { currentPassword = temporary, newPassword = NewPassword })).JsonAsync();

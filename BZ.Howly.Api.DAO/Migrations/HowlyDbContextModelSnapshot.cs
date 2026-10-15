@@ -84,13 +84,6 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Cnpj")
-                        .IsRequired()
-                        .HasMaxLength(14)
-                        .IsUnicode(false)
-                        .HasColumnType("char(14)")
-                        .IsFixedLength();
-
                     b.Property<string>("CompanyName")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -104,6 +97,12 @@ namespace BZ.Howly.Api.DAO.Migrations
 
                     b.Property<Guid>("CreatedBy")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Document")
+                        .IsRequired()
+                        .HasMaxLength(14)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(14)");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
@@ -120,7 +119,7 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.HasIndex("TenantId", "Cnpj")
+                    b.HasIndex("TenantId", "Document")
                         .IsUnique();
 
                     b.ToTable("Customers", (string)null);

@@ -34,7 +34,7 @@ public class ProfileConfirmationTests(HowlyApiFactory factory) : IClassFixture<H
         var analystToken = await AnalystTokenAsync();
         var cnpj = NewCnpj();
         var created = await (await _client.SendAsync(HttpMethod.Post, "/api/customers", analystToken,
-            new { cnpj, companyName = "Beagle Industrial Ltda", contacts = new[] { Contact() } })).JsonAsync();
+            new { document = cnpj, companyName = "Beagle Industrial Ltda", contacts = new[] { Contact() } })).JsonAsync();
         var temporaryPassword = created.GetProperty("temporaryPassword").GetString()!;
 
         var pending = (await _client.LoginCustomerAsync(cnpj, temporaryPassword)).GetProperty("accessToken").GetString();
@@ -80,7 +80,7 @@ public class ProfileConfirmationTests(HowlyApiFactory factory) : IClassFixture<H
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var profile = await response.JsonAsync();
-        profile.GetProperty("cnpj").GetString().Should().Be(cnpj);
+        profile.GetProperty("document").GetString().Should().Be(cnpj);
         profile.GetProperty("companyName").GetString().Should().Be("Beagle Industrial Ltda");
         var contact = profile.GetProperty("contacts").EnumerateArray().Should().ContainSingle().Subject;
         contact.GetProperty("name").GetString().Should().Be("Bia Souza");
@@ -125,7 +125,7 @@ public class ProfileConfirmationTests(HowlyApiFactory factory) : IClassFixture<H
         var analystToken = await AnalystTokenAsync();
         var cnpj = NewCnpj();
         var created = await (await _client.SendAsync(HttpMethod.Post, "/api/customers", analystToken,
-            new { cnpj, companyName = "Beagle Industrial Ltda", contacts = new[] { Contact() } })).JsonAsync();
+            new { document = cnpj, companyName = "Beagle Industrial Ltda", contacts = new[] { Contact() } })).JsonAsync();
         var pending = (await _client.LoginCustomerAsync(cnpj, created.GetProperty("temporaryPassword").GetString()!)).GetProperty("accessToken").GetString();
 
         var response = await _client.SendAsync(HttpMethod.Get, "/api/me/company", pending);

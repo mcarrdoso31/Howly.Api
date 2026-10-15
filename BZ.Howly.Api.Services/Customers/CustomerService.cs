@@ -25,34 +25,34 @@ public sealed class CustomerService(
     {
         var contacts = ContactRequest.ToDetails(request.Contacts);
         var errors = new Dictionary<string, string[]>(Customer.Validate(request.CompanyName, contacts));
-        if (!Cnpj.TryParse(request.Cnpj, out var cnpj))
-            errors["cnpj"] = ["CNPJ is invalid."];
+        if (!TaxId.TryParse(request.Document, out var document))
+            errors["document"] = ["Enter a valid CPF or CNPJ."];
         if (errors.Count > 0)
             return OperationResult<CustomerCreatedResponse>.Invalid(errors);
 
-        if (await customerRepository.ExistsAsync(cnpj!, cancellationToken)
-            || await userAccountStore.FindByUsernameAsync(cnpj!.Value, cancellationToken) is not null)
-            return OperationResult<CustomerCreatedResponse>.Conflict("A customer with this CNPJ already exists.");
+        if (await customerRepository.ExistsAsync(document!, cancellationToken)
+            || await userAccountStore.FindByUsernameAsync(document!.Value, cancellationToken) is not null)
+            return OperationResult<CustomerCreatedResponse>.Conflict("A customer with this CPF or CNPJ already exists.");
 
         var temporaryPassword = passwordGenerator.Generate();
 
         return await unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
             var created = await userAccountStore.CreateAsync(
-                new NewUserAccount(cnpj!.Value, request.CompanyName.Trim(), Roles.Customer, MustConfirmProfile: true), temporaryPassword, ct);
+                new NewUserAccount(document!.Value, request.CompanyName.Trim(), Roles.Customer, MustConfirmProfile: true), temporaryPassword, ct);
             if (created.UsernameTaken)
-                return OperationResult<CustomerCreatedResponse>.Conflict("A customer with this CNPJ already exists.");
+                return OperationResult<CustomerCreatedResponse>.Conflict("A customer with this CPF or CNPJ already exists.");
             if (!created.Succeeded)
                 throw new InvalidOperationException($"Could not create customer login: {string.Join("; ", created.Errors)}");
 
-            var customer = Customer.Create(cnpj, request.CompanyName, contacts, created.Account!.Id, createdBy, timeProvider.GetUtcNow());
+            var customer = Customer.Create(document, request.CompanyName, contacts, created.Account!.Id, createdBy, timeProvider.GetUtcNow());
             await customerRepository.AddAsync(customer, ct);
             await customerRepository.SaveChangesAsync(ct);
 
-            logger.LogInformation("Customer {CustomerId} ({Cnpj}) created by {UserId}.", customer.Id, cnpj.Value, createdBy);
+            logger.LogInformation("Customer {CustomerId} ({Document}) created by {UserId}.", customer.Id, document.Value, createdBy);
 
             return OperationResult<CustomerCreatedResponse>.Success(new CustomerCreatedResponse(
-                customer.Id, customer.Cnpj.Value, customer.CompanyName, ContactResponse.From(customer.Contacts), temporaryPassword));
+                customer.Id, customer.Document.Value, customer.CompanyName, ContactResponse.From(customer.Contacts), temporaryPassword));
         }, cancellationToken);
     }
 
@@ -74,7 +74,7 @@ public sealed class CustomerService(
         var (items, total) = await customerRepository.SearchAsync(search, status, (page - 1) * pageSize, pageSize, cancellationToken);
 
         return new PagedResponse<CustomerListItemResponse>(
-            items.Select(i => new CustomerListItemResponse(i.Id, i.Cnpj, i.CompanyName, i.IsActive, i.MustChangePassword, i.ConfirmedAt)).ToList(),
+            items.Select(i => new CustomerListItemResponse(i.Id, i.Document, i.CompanyName, i.IsActive, i.MustChangePassword, i.ConfirmedAt)).ToList(),
             page, pageSize, total);
     }
 
@@ -153,7 +153,7 @@ public sealed class CustomerService(
         var user = await userAccountStore.FindByIdAsync(customer.UserId, cancellationToken);
 
         return new CustomerResponse(
-            customer.Id, customer.Cnpj.Value, customer.CompanyName, customer.TradeName, ContactResponse.From(customer.Contacts),
+            customer.Id, customer.Document.Value, customer.CompanyName, customer.TradeName, ContactResponse.From(customer.Contacts),
             user?.IsActive ?? false, user?.MustChangePassword ?? false, customer.ConfirmedAt, customer.CreatedAt);
     }
 }

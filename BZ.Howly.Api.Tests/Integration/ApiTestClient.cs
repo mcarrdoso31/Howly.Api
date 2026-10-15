@@ -20,7 +20,7 @@ public static class ApiTestClient
 
     public static async Task<JsonElement> LoginCustomerAsync(this HttpClient client, string cnpj, string password)
     {
-        var response = await client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj, password });
+        var response = await client.PostAsJsonAsync("/api/auth/customer/login", new { document = cnpj, password });
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<JsonElement>();
     }

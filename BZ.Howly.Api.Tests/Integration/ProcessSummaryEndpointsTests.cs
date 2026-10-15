@@ -35,7 +35,7 @@ public class ProcessSummaryEndpointsTests(HowlyApiFactory factory) : IClassFixtu
 
         var customer = await (await client.SendAsync(HttpMethod.Post, "/api/customers", jane, new
         {
-            cnpj = NewCnpj(),
+            document = NewCnpj(),
             companyName = "Beagle Industrial Ltda",
             contacts = new[] { new { name = "Bia", email = "bia@beagle.example", phone = "(11) 91234-5678", receivesNotices = true } },
         })).JsonAsync();

@@ -8,7 +8,7 @@ public interface ICustomerRepository
     Task AddAsync(Customer customer, CancellationToken cancellationToken = default);
     Task<Customer?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<Customer?> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
-    Task<bool> ExistsAsync(Cnpj cnpj, CancellationToken cancellationToken = default);
+    Task<bool> ExistsAsync(TaxId document, CancellationToken cancellationToken = default);
 
     /// <summary>Filters by company name or CNPJ (both partial, case-insensitive) and by status, ordered by company name.</summary>
     Task<(IReadOnlyList<CustomerListItem> Items, int TotalCount)> SearchAsync(

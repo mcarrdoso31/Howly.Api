@@ -17,13 +17,13 @@ public sealed class CustomerRepository(HowlyDbContext context) : ICustomerReposi
     public Task<Customer?> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) =>
         context.Customers.SingleOrDefaultAsync(c => c.UserId == userId, cancellationToken);
 
-    public Task<bool> ExistsAsync(Cnpj cnpj, CancellationToken cancellationToken = default) =>
-        context.Customers.AnyAsync(c => c.Cnpj == cnpj, cancellationToken);
+    public Task<bool> ExistsAsync(TaxId document, CancellationToken cancellationToken = default) =>
+        context.Customers.AnyAsync(c => c.Document == document, cancellationToken);
 
     public async Task<(IReadOnlyList<CustomerListItem> Items, int TotalCount)> SearchAsync(
         string? search, CustomerStatusFilter status, int skip, int take, CancellationToken cancellationToken = default)
     {
-        // The customer's login username is the normalized CNPJ, which keeps the CNPJ searchable as plain text.
+        // The customer's login username is the normalized CPF/CNPJ, which keeps the document searchable as plain text.
         var query =
             from customer in context.Customers
             join user in context.Users on customer.UserId equals user.Id
@@ -32,12 +32,12 @@ public sealed class CustomerRepository(HowlyDbContext context) : ICustomerReposi
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim().ToUpperInvariant();
-            var cnpjTerm = new string(term.Where(char.IsAsciiLetterOrDigit).ToArray());
+            var documentTerm = new string(term.Where(char.IsAsciiLetterOrDigit).ToArray());
 
             // ToUpper on both sides keeps the search case-insensitive on SQL Server, SQLite and PostgreSQL alike.
             query = query.Where(x =>
                 x.customer.CompanyName.ToUpper().Contains(term) ||
-                (cnpjTerm.Length > 0 && x.user.UserName!.Contains(cnpjTerm)));
+                (documentTerm.Length > 0 && x.user.UserName!.Contains(documentTerm)));
         }
 
         query = status switch

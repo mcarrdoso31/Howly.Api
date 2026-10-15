@@ -55,7 +55,7 @@ public class TenantIsolationTests(HowlyApiFactory factory) : IClassFixture<Howly
     {
         var response = await portal.Client.SendAsync(HttpMethod.Post, "/api/customers", portal.StaffToken, new
         {
-            cnpj,
+            document = cnpj,
             companyName = "Beagle Industrial Ltda",
             contacts = new[] { new { name = "Bia", email = "bia@beagle.example", phone = "(11) 91234-5678", receivesNotices = true } },
         });
@@ -194,9 +194,9 @@ public class TenantIsolationTests(HowlyApiFactory factory) : IClassFixture<Howly
         inBia.GetProperty("id").GetGuid().Should().NotBe(inOther.GetProperty("id").GetGuid());
         var biaPassword = inBia.GetProperty("temporaryPassword").GetString()!;
         var otherPassword = inOther.GetProperty("temporaryPassword").GetString()!;
-        (await bia.Client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj, password = biaPassword })).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await other.Client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj, password = otherPassword })).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await other.Client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj, password = biaPassword }))
+        (await bia.Client.PostAsJsonAsync("/api/auth/customer/login", new { document = cnpj, password = biaPassword })).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await other.Client.PostAsJsonAsync("/api/auth/customer/login", new { document = cnpj, password = otherPassword })).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await other.Client.PostAsJsonAsync("/api/auth/customer/login", new { document = cnpj, password = biaPassword }))
             .StatusCode.Should().Be(HttpStatusCode.Unauthorized, "each consultancy has its own account and password");
     }
 
@@ -249,7 +249,7 @@ public class TenantIsolationTests(HowlyApiFactory factory) : IClassFixture<Howly
         using var scope = factory.Services.CreateScope();
         var customers = scope.ServiceProvider.GetRequiredService<ICustomerRepository>();
         await customers.AddAsync(Customer.Create(
-            Cnpj.Parse(NewCnpj()), "Sem consultoria", [new ContactDetails("Bia", "bia@beagle.example", "11912345678", true)], Guid.NewGuid(), Guid.NewGuid(), DateTimeOffset.UtcNow));
+            TaxId.Parse(NewCnpj()), "Sem consultoria", [new ContactDetails("Bia", "bia@beagle.example", "11912345678", true)], Guid.NewGuid(), Guid.NewGuid(), DateTimeOffset.UtcNow));
 
         var save = () => customers.SaveChangesAsync();
 

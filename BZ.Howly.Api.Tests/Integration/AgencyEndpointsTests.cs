@@ -95,7 +95,7 @@ public class AgencyEndpointsTests(HowlyApiFactory factory) : IClassFixture<Howly
 
         var customer = await (await p.Client.SendAsync(HttpMethod.Post, "/api/customers", p.Analyst, new
         {
-            cnpj = NewCnpj(),
+            document = NewCnpj(),
             companyName = "Beagle",
             contacts = new[] { new { name = "Bia", email = "bia@beagle.example", phone = "(11) 91234-5678", receivesNotices = true } },
         })).JsonAsync();

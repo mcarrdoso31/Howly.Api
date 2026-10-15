@@ -6,7 +6,7 @@ namespace BZ.Howly.Api.Tests.Customers;
 
 public class CustomerTests
 {
-    private static readonly Cnpj ValidCnpj = Cnpj.Parse("10000001000190");
+    private static readonly TaxId ValidCnpj = TaxId.Parse("10000001000190");
     private static readonly DateTimeOffset Now = new(2026, 10, 13, 12, 0, 0, TimeSpan.Zero);
     private static readonly Guid UserId = Guid.Parse("00000000-0000-0000-0000-0000000000a1");
     private static readonly Guid AnalystId = Guid.Parse("00000000-0000-0000-0000-0000000000b2");
@@ -26,7 +26,7 @@ public class CustomerTests
             [new ContactDetails(" Bia Souza ", " bia@beagle.example ", "(11) 91234-5678", true)], UserId, AnalystId, Now);
 
         customer.Id.Should().NotBeEmpty();
-        customer.Cnpj.Should().Be(ValidCnpj);
+        customer.Document.Should().Be(ValidCnpj);
         customer.CompanyName.Should().Be("Beagle Industrial Ltda");
         var contact = customer.Contacts.Should().ContainSingle().Subject;
         contact.Name.Should().Be("Bia Souza");
@@ -133,7 +133,7 @@ public class CustomerTests
 
         customer.CompanyName.Should().Be("Beagle Industrial S.A.");
         customer.Contacts.Should().ContainSingle().Which.Name.Should().Be("Caio Lima");
-        customer.Cnpj.Should().Be(ValidCnpj);
+        customer.Document.Should().Be(ValidCnpj);
     }
 
     [Fact]

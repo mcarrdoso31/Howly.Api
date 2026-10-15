@@ -23,7 +23,7 @@ public class AuthEndpointsTests(HowlyApiFactory factory) : IClassFixture<HowlyAp
     {
         await factory.CreateUserAsync("11222333000181", Password, "ACME Industrial", "Customer");
 
-        var response = await _client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj = "11.222.333/0001-81", password = Password });
+        var response = await _client.PostAsJsonAsync("/api/auth/customer/login", new { document = "11.222.333/0001-81", password = Password });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
@@ -39,7 +39,7 @@ public class AuthEndpointsTests(HowlyApiFactory factory) : IClassFixture<HowlyAp
     {
         await factory.CreateUserAsync("12ABC34501DE35", Password, "Beagle Co", "Customer");
 
-        var response = await _client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj = "12ABC34501DE35", password = Password });
+        var response = await _client.PostAsJsonAsync("/api/auth/customer/login", new { document = "12ABC34501DE35", password = Password });
 
         var cookie = GetSetCookie(response).ToLowerInvariant();
         cookie.Should().StartWith($"{RefreshCookie}=");
@@ -51,7 +51,7 @@ public class AuthEndpointsTests(HowlyApiFactory factory) : IClassFixture<HowlyAp
     {
         await factory.CreateUserAsync("10000001000190", Password, "Wrong Password Co", "Customer");
 
-        var response = await _client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj = "10000001000190", password = "wrong-password" });
+        var response = await _client.PostAsJsonAsync("/api/auth/customer/login", new { document = "10000001000190", password = "wrong-password" });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
@@ -64,9 +64,9 @@ public class AuthEndpointsTests(HowlyApiFactory factory) : IClassFixture<HowlyAp
         await factory.CreateUserAsync("10000002000134", Password, "Locked Co", "Customer");
 
         for (var i = 0; i < 5; i++)
-            await _client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj = "10000002000134", password = "wrong-password" });
+            await _client.PostAsJsonAsync("/api/auth/customer/login", new { document = "10000002000134", password = "wrong-password" });
 
-        var response = await _client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj = "10000002000134", password = Password });
+        var response = await _client.PostAsJsonAsync("/api/auth/customer/login", new { document = "10000002000134", password = Password });
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -77,9 +77,9 @@ public class AuthEndpointsTests(HowlyApiFactory factory) : IClassFixture<HowlyAp
         await factory.CreateUserAsync("10000003000189", Password, "Almost Locked Co", "Customer");
 
         for (var i = 0; i < 4; i++)
-            await _client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj = "10000003000189", password = "wrong-password" });
+            await _client.PostAsJsonAsync("/api/auth/customer/login", new { document = "10000003000189", password = "wrong-password" });
 
-        var response = await _client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj = "10000003000189", password = Password });
+        var response = await _client.PostAsJsonAsync("/api/auth/customer/login", new { document = "10000003000189", password = Password });
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }

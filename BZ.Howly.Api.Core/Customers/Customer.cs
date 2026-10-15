@@ -2,7 +2,10 @@ using BZ.Howly.Api.Core.Shared;
 
 namespace BZ.Howly.Api.Core.Customers;
 
-/// <summary>A company served by the portal. Each customer has exactly one login user, identified by the CNPJ.</summary>
+/// <summary>
+/// A company (CNPJ) or a person (CPF) served by the portal. Each customer has exactly one login user, identified by
+/// that document.
+/// </summary>
 public sealed class Customer
 {
     public const int MaxNameLength = 200;
@@ -12,7 +15,7 @@ public sealed class Customer
     private readonly List<CustomerContact> _contacts = [];
 
     public Guid Id { get; private set; }
-    public Cnpj Cnpj { get; private set; } = null!;
+    public TaxId Document { get; private set; } = null!;
     public string CompanyName { get; private set; } = string.Empty;
 
     /// <summary>Name the company goes by, set by the customer. Optional.</summary>
@@ -69,12 +72,12 @@ public sealed class Customer
     }
 
     public static Customer Create(
-        Cnpj cnpj, string companyName, IReadOnlyList<ContactDetails> contacts, Guid userId, Guid createdBy, DateTimeOffset now)
+        TaxId document, string companyName, IReadOnlyList<ContactDetails> contacts, Guid userId, Guid createdBy, DateTimeOffset now)
     {
         var customer = new Customer
         {
             Id = Ids.New(),
-            Cnpj = cnpj,
+            Document = document,
             UserId = userId,
             CreatedBy = createdBy,
             CreatedAt = now,
@@ -83,7 +86,7 @@ public sealed class Customer
         return customer;
     }
 
-    /// <summary>Replaces the company name and the whole contact list. The CNPJ never changes: it is the customer's login.</summary>
+    /// <summary>Replaces the company name and the whole contact list. The document never changes: it is the customer's login.</summary>
     public void Update(string companyName, IReadOnlyList<ContactDetails> contacts)
     {
         var errors = Validate(companyName, contacts);

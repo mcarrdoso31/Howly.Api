@@ -33,7 +33,7 @@ public class CustomerEndpointsTests(HowlyApiFactory factory) : IClassFixture<How
         new { name, email, phone, receivesNotices };
 
     private static object NewCustomerBody(string cnpj, string companyName = "Beagle Industrial Ltda", string contactEmail = "contato@beagle.example") =>
-        new { cnpj, companyName, contacts = new[] { Contact(email: contactEmail) } };
+        new { document = cnpj, companyName, contacts = new[] { Contact(email: contactEmail) } };
 
     private async Task<JsonElement> CreateCustomerAsync(string token, string cnpj, string companyName = "Beagle Industrial Ltda")
     {
@@ -56,7 +56,7 @@ public class CustomerEndpointsTests(HowlyApiFactory factory) : IClassFixture<How
         response.StatusCode.Should().Be(HttpStatusCode.Created);
         var body = await response.JsonAsync();
         response.Headers.Location!.ToString().Should().EndWith($"/api/customers/{body.GetProperty("id").GetGuid()}");
-        body.GetProperty("cnpj").GetString().Should().Be(cnpj);
+        body.GetProperty("document").GetString().Should().Be(cnpj);
         body.GetProperty("companyName").GetString().Should().Be("Beagle Industrial Ltda");
         body.GetProperty("temporaryPassword").GetString().Should().HaveLength(12);
     }
@@ -91,7 +91,7 @@ public class CustomerEndpointsTests(HowlyApiFactory factory) : IClassFixture<How
         var response = await _client.SendAsync(HttpMethod.Post, "/api/customers", await AnalystTokenAsync(), NewCustomerBody("11222333000182"));
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await response.JsonAsync()).GetProperty("errors").TryGetProperty("cnpj", out _).Should().BeTrue();
+        (await response.JsonAsync()).GetProperty("errors").TryGetProperty("document", out _).Should().BeTrue();
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public class CustomerEndpointsTests(HowlyApiFactory factory) : IClassFixture<How
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await response.JsonAsync()).GetProperty("errors").TryGetProperty("contacts[0].email", out _).Should().BeTrue();
-        var login = await _client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj, password = "anything-at-all" });
+        var login = await _client.PostAsJsonAsync("/api/auth/customer/login", new { document = cnpj, password = "anything-at-all" });
         login.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
@@ -141,7 +141,7 @@ public class CustomerEndpointsTests(HowlyApiFactory factory) : IClassFixture<How
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.JsonAsync();
-        body.GetProperty("cnpj").GetString().Should().Be(cnpj);
+        body.GetProperty("document").GetString().Should().Be(cnpj);
         var contact = body.GetProperty("contacts").EnumerateArray().Should().ContainSingle().Subject;
         contact.GetProperty("name").GetString().Should().Be("Bia Souza");
         contact.GetProperty("email").GetString().Should().Be("contato@beagle.example");
@@ -188,10 +188,10 @@ public class CustomerEndpointsTests(HowlyApiFactory factory) : IClassFixture<How
         var byCnpj = await (await _client.SendAsync(HttpMethod.Get, $"/api/customers?search={cnpj[..2]}.{cnpj[2..5]}.{cnpj[5..8]}", token)).JsonAsync();
 
         var item = byName.GetProperty("items").EnumerateArray().Should().ContainSingle().Subject;
-        item.GetProperty("cnpj").GetString().Should().Be(cnpj);
+        item.GetProperty("document").GetString().Should().Be(cnpj);
         item.GetProperty("mustChangePassword").GetBoolean().Should().BeTrue();
         byName.GetProperty("totalCount").GetInt32().Should().Be(1);
-        byCnpj.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("cnpj").GetString()).Should().Contain(cnpj);
+        byCnpj.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("document").GetString()).Should().Contain(cnpj);
     }
 
     [Fact]
@@ -226,7 +226,7 @@ public class CustomerEndpointsTests(HowlyApiFactory factory) : IClassFixture<How
         var newPassword = (await response.JsonAsync()).GetProperty("temporaryPassword").GetString()!;
         newPassword.Should().HaveLength(12).And.NotBe(created.GetProperty("temporaryPassword").GetString());
 
-        var oldLogin = await _client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj, password = created.GetProperty("temporaryPassword").GetString() });
+        var oldLogin = await _client.PostAsJsonAsync("/api/auth/customer/login", new { document = cnpj, password = created.GetProperty("temporaryPassword").GetString() });
         oldLogin.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         var newLogin = await _client.LoginCustomerAsync(cnpj, newPassword);
         newLogin.GetProperty("user").GetProperty("mustChangePassword").GetBoolean().Should().BeTrue();
@@ -238,7 +238,7 @@ public class CustomerEndpointsTests(HowlyApiFactory factory) : IClassFixture<How
         var token = await AnalystTokenAsync();
         var cnpj = NewCnpj();
         var created = await CreateCustomerAsync(token, cnpj);
-        var login = await _client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj, password = created.GetProperty("temporaryPassword").GetString() });
+        var login = await _client.PostAsJsonAsync("/api/auth/customer/login", new { document = cnpj, password = created.GetProperty("temporaryPassword").GetString() });
         var cookie = login.Headers.GetValues("Set-Cookie").Single(c => c.StartsWith("howly_refresh=")).Split(';')[0];
 
         await _client.SendAsync(HttpMethod.Post, $"/api/customers/{created.GetProperty("id").GetGuid()}/reset-password", token);
@@ -287,7 +287,7 @@ public class CustomerEndpointsTests(HowlyApiFactory factory) : IClassFixture<How
         var body = await response.JsonAsync();
         body.GetProperty("companyName").GetString().Should().Be("Beagle Industrial S.A.");
         body.GetProperty("contacts").EnumerateArray().Select(c => c.GetProperty("name").GetString()).Should().Equal("Bia Souza", "Caio Lima");
-        body.GetProperty("cnpj").GetString().Should().Be(cnpj);
+        body.GetProperty("document").GetString().Should().Be(cnpj);
         var login = await _client.LoginCustomerAsync(cnpj, created.GetProperty("temporaryPassword").GetString()!);
         login.GetProperty("user").GetProperty("name").GetString().Should().Be("Beagle Industrial S.A.");
     }
@@ -328,7 +328,7 @@ public class CustomerEndpointsTests(HowlyApiFactory factory) : IClassFixture<How
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         (await response.JsonAsync()).GetProperty("isActive").GetBoolean().Should().BeFalse();
-        var login = await _client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj, password });
+        var login = await _client.PostAsJsonAsync("/api/auth/customer/login", new { document = cnpj, password });
         login.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await login.JsonAsync()).GetProperty("code").GetString().Should().Be("account_inactive");
     }
@@ -341,7 +341,7 @@ public class CustomerEndpointsTests(HowlyApiFactory factory) : IClassFixture<How
         var created = await CreateCustomerAsync(token, cnpj);
         await _client.SendAsync(HttpMethod.Post, $"/api/customers/{created.GetProperty("id").GetGuid()}/deactivate", token);
 
-        var login = await _client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj, password = "Wrong-Password-1" });
+        var login = await _client.PostAsJsonAsync("/api/auth/customer/login", new { document = cnpj, password = "Wrong-Password-1" });
 
         login.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -352,7 +352,7 @@ public class CustomerEndpointsTests(HowlyApiFactory factory) : IClassFixture<How
         var token = await AnalystTokenAsync();
         var cnpj = NewCnpj();
         var created = await CreateCustomerAsync(token, cnpj);
-        var login = await _client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj, password = created.GetProperty("temporaryPassword").GetString() });
+        var login = await _client.PostAsJsonAsync("/api/auth/customer/login", new { document = cnpj, password = created.GetProperty("temporaryPassword").GetString() });
         var cookie = login.Headers.GetValues("Set-Cookie").Single(c => c.StartsWith("howly_refresh=")).Split(';')[0];
 
         await _client.SendAsync(HttpMethod.Post, $"/api/customers/{created.GetProperty("id").GetGuid()}/deactivate", token);

@@ -54,7 +54,7 @@ public class ErrorResponsesTests(HowlyApiFactory factory) : IClassFixture<HowlyA
         var token = await StaffTokenAsync();
         var contacts = new[] { new { name = "Bia", email = "bia@beagle.example", phone = "(11) 91234-5678", receivesNotices = true } };
         var customer = await (await _client.SendAsync(HttpMethod.Post, "/api/customers", token,
-            new { cnpj = "10000004000123", companyName = "Beagle Industrial Ltda", contacts })).JsonAsync();
+            new { document = "10000004000123", companyName = "Beagle Industrial Ltda", contacts })).JsonAsync();
         var type = await (await _client.SendAsync(HttpMethod.Post, "/api/process-types", token,
             new { name = "Tipo", steps = new[] { new { name = "Etapa", owner = "Staff", isOptional = false } } })).JsonAsync();
         var process = await (await _client.SendAsync(HttpMethod.Post, "/api/processes", token,

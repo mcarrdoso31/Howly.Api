@@ -43,9 +43,9 @@ public class DevelopmentSeederTests(HowlyApiFactory factory) : IClassFixture<How
 
         var customers = await (await client.SendAsync(HttpMethod.Get, "/api/customers?search=BZ", analystToken)).JsonAsync();
         var customer = customers.GetProperty("items").EnumerateArray().Should().ContainSingle().Subject;
-        customer.GetProperty("cnpj").GetString().Should().Be(Cnpj);
+        customer.GetProperty("document").GetString().Should().Be(Cnpj);
 
-        var login = await client.PostAsJsonAsync("/api/auth/customer/login", new { cnpj = Cnpj, password = Password });
+        var login = await client.PostAsJsonAsync("/api/auth/customer/login", new { document = Cnpj, password = Password });
         login.StatusCode.Should().Be(HttpStatusCode.OK);
         var customerToken = (await login.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("accessToken").GetString();
         var company = await client.SendAsync(HttpMethod.Get, "/api/me/company", customerToken);

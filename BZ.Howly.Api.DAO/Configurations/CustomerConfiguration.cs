@@ -15,14 +15,14 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Id).ValueGeneratedNever();
 
-        builder.Property(c => c.Cnpj)
-            .HasConversion(cnpj => cnpj.Value, value => Cnpj.Parse(value))
+        // A CPF (11 digits) or a CNPJ (14 characters).
+        builder.Property(c => c.Document)
+            .HasConversion(document => document.Value, value => TaxId.Parse(value))
             .HasMaxLength(14)
-            .IsFixedLength()
             .IsUnicode(false)
             .IsRequired();
-        // A CNPJ is unique per consultancy: the same company can be a customer of several of them.
-        builder.HasIndex(HowlyDbContext.TenantIdProperty, nameof(Customer.Cnpj)).IsUnique();
+        // A document is unique per consultancy: the same company or person can be a customer of several of them.
+        builder.HasIndex(HowlyDbContext.TenantIdProperty, nameof(Customer.Document)).IsUnique();
 
         builder.Property(c => c.CompanyName).HasMaxLength(Customer.MaxNameLength).IsRequired();
         builder.Property(c => c.TradeName).HasMaxLength(Customer.MaxNameLength);

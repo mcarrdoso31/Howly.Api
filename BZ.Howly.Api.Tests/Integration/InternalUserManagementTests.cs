@@ -31,7 +31,7 @@ public class InternalUserManagementTests(HowlyApiFactory factory) : IClassFixtur
     private async Task<Guid> ProcessAssignedToAsync(string staffToken, Guid assigneeId)
     {
         var contacts = new[] { new { name = "Bia", email = "bia@beagle.example", phone = "(11) 91234-5678", receivesNotices = true } };
-        var customer = await (await _client.SendAsync(HttpMethod.Post, "/api/customers", staffToken, new { cnpj = NewCnpj(), companyName = "Beagle Industrial Ltda", contacts })).JsonAsync();
+        var customer = await (await _client.SendAsync(HttpMethod.Post, "/api/customers", staffToken, new { document = NewCnpj(), companyName = "Beagle Industrial Ltda", contacts })).JsonAsync();
         var type = await (await _client.SendAsync(HttpMethod.Post, "/api/process-types", staffToken, new
         {
             name = $"MTR {Guid.NewGuid():N}"[..12],

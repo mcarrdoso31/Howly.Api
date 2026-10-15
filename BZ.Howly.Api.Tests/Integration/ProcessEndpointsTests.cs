@@ -35,7 +35,7 @@ public class ProcessEndpointsTests(HowlyApiFactory factory) : IClassFixture<Howl
         var cnpj = NewCnpj();
         var created = await (await _client.SendAsync(HttpMethod.Post, "/api/customers", staffToken, new
         {
-            cnpj,
+            document = cnpj,
             companyName,
             contacts = new[] { new { name = "Bia", email = "bia@beagle.example", phone = "(11) 91234-5678", receivesNotices = true } },
         })).JsonAsync();

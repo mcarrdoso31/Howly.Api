@@ -37,7 +37,7 @@ public class PauseEndpointsTests(HowlyApiFactory factory) : IClassFixture<HowlyA
         var agency = await (await client.SendAsync(HttpMethod.Post, "/api/agencies", staff, new { acronym = "IAT", name = "Instituto Água e Terra", sphere = "State", state = "PR" })).JsonAsync();
         var contacts = new[] { new { name = "Bia", email = "bia@beagle.example", phone = "(11) 91234-5678", receivesNotices = true } };
         var cnpj = NewCnpj();
-        var customer = await (await client.SendAsync(HttpMethod.Post, "/api/customers", staff, new { cnpj, companyName = "Beagle", contacts })).JsonAsync();
+        var customer = await (await client.SendAsync(HttpMethod.Post, "/api/customers", staff, new { document = cnpj, companyName = "Beagle", contacts })).JsonAsync();
         var temporary = customer.GetProperty("temporaryPassword").GetString()!;
         var pending = (await client.LoginCustomerAsync(cnpj, temporary)).GetProperty("accessToken").GetString();
         var changed = await (await client.SendAsync(HttpMethod.Post, "/api/auth/change-password", pending, new { currentPassword = temporary, newPassword = NewPassword })).JsonAsync();

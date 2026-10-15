@@ -17,7 +17,7 @@ namespace BZ.Howly.Api.Extensions;
 /// <list type="bullet">
 /// <item>Seed:Admin:* (Username, Password, DisplayName): an Admin;</item>
 /// <item>Seed:Analyst:* (Username, Password, DisplayName): an Analyst;</item>
-/// <item>Seed:Customer:* (Cnpj, Password, DisplayName, and optionally ContactName, ContactEmail, ContactPhone): a
+/// <item>Seed:Customer:* (Cnpj — a CPF works too —, Password, DisplayName, and optionally ContactName, ContactEmail, ContactPhone): a
 /// complete sample customer (company, contact and portal login);</item>
 /// <item>Seed:PlatformAdmin:* in the platform portal.</item>
 /// </list>
@@ -88,18 +88,18 @@ public static class DevelopmentSeeder
     }
 
     /// <summary>
-    /// A complete customer: the company with a contact that receives notices, plus its portal login (the CNPJ). A login
+    /// A complete customer: the company with a contact that receives notices, plus its portal login (the CPF or CNPJ). A login
     /// left without its company by an older seed gets the company now.
     /// </summary>
     private static async Task SeedCustomerAsync(IServiceProvider services, IConfiguration config, Guid createdBy)
     {
-        if (!Cnpj.TryParse(config["Seed:Customer:Cnpj"], out var cnpj))
+        if (!TaxId.TryParse(config["Seed:Customer:Cnpj"], out var document))
         {
             Logger(services).LogInformation("Seed of Customer skipped: Seed:Customer:Cnpj missing or invalid.");
             return;
         }
 
-        var user = await SeedUserAsync(services, config, "Customer", Roles.Customer, "Sample Customer", username: cnpj!.Value);
+        var user = await SeedUserAsync(services, config, "Customer", Roles.Customer, "Sample Customer", username: document!.Value);
         var customers = services.GetRequiredService<ICustomerRepository>();
         if (user is null || await customers.FindByUserIdAsync(user.Id) is not null)
             return;
@@ -119,7 +119,7 @@ public static class DevelopmentSeeder
             return;
         }
 
-        await customers.AddAsync(Customer.Create(cnpj, companyName, contacts, user.Id, createdBy, DateTimeOffset.UtcNow));
+        await customers.AddAsync(Customer.Create(document, companyName, contacts, user.Id, createdBy, DateTimeOffset.UtcNow));
         await customers.SaveChangesAsync();
         Logger(services).LogInformation("Seeded customer company {Company}.", companyName);
     }

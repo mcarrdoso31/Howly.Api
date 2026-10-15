@@ -202,8 +202,8 @@ public sealed partial class InternalUserService(
 
         if (!UsernamePattern().IsMatch(username))
             errors["username"] = ["Username must have 3 to 50 characters: lowercase letters, digits, '.', '_' or '-'."];
-        else if (Cnpj.TryParse(username, out _))
-            errors["username"] = ["Username cannot be a CNPJ; CNPJs are reserved for customer logins."];
+        else if (TaxId.TryParse(username, out _))
+            errors["username"] = ["Username cannot be a CPF or CNPJ; they are reserved for customer logins."];
 
         if (displayName.Length is 0 or > MaxDisplayNameLength)
             errors["displayName"] = [$"Display name is required and must have at most {MaxDisplayNameLength} characters."];

@@ -91,5 +91,5 @@ public sealed class CustomerProfileService(
     }
 
     private static CustomerProfileResponse ToResponse(Customer customer) =>
-        new(customer.Cnpj.Value, customer.CompanyName, customer.TradeName, ContactResponse.From(customer.Contacts), customer.ConfirmedAt);
+        new(customer.Document.Value, customer.CompanyName, customer.TradeName, ContactResponse.From(customer.Contacts), customer.ConfirmedAt);
 }
