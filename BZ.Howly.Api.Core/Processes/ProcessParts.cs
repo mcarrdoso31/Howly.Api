@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using BZ.Howly.Api.Core.Shared;
 using BZ.Howly.Api.Core.Shared.Exceptions;
 
@@ -195,13 +196,17 @@ public sealed class ProcessEvent
     public string ActorName { get; private set; } = string.Empty;
     public DateTimeOffset At { get; private set; }
 
-    /// <summary>Everything on the timeline is shared with the customer, except the staff's internal notes.</summary>
-    public bool IsVisibleToCustomer => Type switch
-    {
-        ProcessEventType.InternalNote or ProcessEventType.PauseReturnDue or ProcessEventType.RenewalDue => false,
-        ProcessEventType.StepOverdue => Details == nameof(StepOwner.Customer),
-        _ => true,
-    };
+    /// <summary>
+    /// Everything on the timeline is shared with the customer, except the staff's internal notes, their reminders and
+    /// the warnings about steps not with the customer. As an expression so the timeline pages filter in the database.
+    /// </summary>
+    public static readonly Expression<Func<ProcessEvent, bool>> VisibleToCustomer = e =>
+        e.Type != ProcessEventType.InternalNote && e.Type != ProcessEventType.PauseReturnDue && e.Type != ProcessEventType.RenewalDue &&
+        (e.Type != ProcessEventType.StepOverdue || e.Details == nameof(StepOwner.Customer));
+
+    private static readonly Func<ProcessEvent, bool> IsVisible = VisibleToCustomer.Compile();
+
+    public bool IsVisibleToCustomer => IsVisible(this);
 
     private ProcessEvent() { }
 

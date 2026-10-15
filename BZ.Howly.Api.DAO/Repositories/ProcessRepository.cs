@@ -14,6 +14,22 @@ public sealed class ProcessRepository(HowlyDbContext context) : IProcessReposito
     public Task<Process?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         context.Processes.SingleOrDefaultAsync(p => p.Id == id, cancellationToken);
 
+    public Task<Guid?> FindCustomerIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        context.Processes.Where(p => p.Id == id).Select(p => (Guid?)p.CustomerId).SingleOrDefaultAsync(cancellationToken);
+
+    /// <remarks>Keyset by the timeline order (the unique (process, sequence) index serves it): pages do not shift as events arrive.</remarks>
+    public async Task<IReadOnlyList<ProcessEvent>> ListEventsAsync(
+        Guid processId, int? beforeSequence, int take, bool visibleToCustomerOnly, CancellationToken cancellationToken = default)
+    {
+        // Through the process: its tenant filter keeps other consultancies out.
+        var events = context.Processes.Where(p => p.Id == processId).SelectMany(p => p.Events);
+        if (beforeSequence is { } before)
+            events = events.Where(e => e.Sequence < before);
+        if (visibleToCustomerOnly)
+            events = events.Where(ProcessEvent.VisibleToCustomer);
+        return await events.OrderByDescending(e => e.Sequence).Take(take).AsNoTracking().ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Guid>> ListExistingIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default) =>
         ids.Count == 0 ? [] : await context.Processes.Where(p => ids.Contains(p.Id)).Select(p => p.Id).ToListAsync(cancellationToken);
 

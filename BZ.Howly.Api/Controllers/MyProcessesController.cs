@@ -31,7 +31,14 @@ public sealed class MyProcessesController(IProcessService processService, IProce
     [ProducesResponseType<ProcessResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(Guid id, CancellationToken cancellationToken) =>
-        this.ToActionResult(await processService.GetForCustomerAsync(this.CurrentUserId(), id, cancellationToken), Ok);
+        this.ToActionResult(await processService.GetForCustomerAsync(this.CurrentUserId(), id, cancellationToken), this.OkWithETag);
+
+    /// <summary>Older events of the timeline, newest first, without what only the staff see.</summary>
+    [HttpGet("{id:guid}/events")]
+    [ProducesResponseType<ProcessEventPageResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Events(Guid id, [FromQuery] string? before, CancellationToken cancellationToken, [FromQuery] int take = ProcessEventPageResponse.DefaultSize) =>
+        this.ToActionResult(await processService.ListEventsForCustomerAsync(this.CurrentUserId(), id, before, take, cancellationToken), Ok);
 
     [HttpPost("{id:guid}/comments")]
     [ProducesResponseType<ProcessResponse>(StatusCodes.Status200OK)]

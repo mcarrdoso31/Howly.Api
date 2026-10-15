@@ -43,7 +43,14 @@ public sealed class ProcessesController(IProcessService processService, IProcess
     [ProducesResponseType<ProcessResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(Guid id, CancellationToken cancellationToken) =>
-        this.ToActionResult(await processService.GetAsync(id, cancellationToken), Ok);
+        this.ToActionResult(await processService.GetAsync(id, cancellationToken), this.OkWithETag);
+
+    /// <summary>The timeline, newest first, a page at a time: <paramref name="before"/> is the cursor of the details or of the previous page.</summary>
+    [HttpGet("{id:guid}/events")]
+    [ProducesResponseType<ProcessEventPageResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Events(Guid id, [FromQuery] string? before, CancellationToken cancellationToken, [FromQuery] int take = ProcessEventPageResponse.DefaultSize) =>
+        this.ToActionResult(await processService.ListEventsAsync(id, before, take, cancellationToken), Ok);
 
     [HttpPost]
     [ProducesResponseType<ProcessResponse>(StatusCodes.Status201Created)]
@@ -55,26 +62,26 @@ public sealed class ProcessesController(IProcessService processService, IProcess
 
     [HttpPost("{id:guid}/advance")]
     public async Task<IActionResult> Advance(Guid id, ProcessCommentRequest request, CancellationToken cancellationToken) =>
-        this.ToActionResult(await processService.AdvanceAsync(id, request, this.CurrentUserId(), cancellationToken), Ok);
+        this.ToActionResult(await processService.AdvanceAsync(id, request, this.CurrentUserId(), this.IfMatch(), cancellationToken), Ok);
 
     [HttpPost("{id:guid}/skip")]
     public async Task<IActionResult> Skip(Guid id, ProcessCommentRequest request, CancellationToken cancellationToken) =>
-        this.ToActionResult(await processService.SkipAsync(id, request, this.CurrentUserId(), cancellationToken), Ok);
+        this.ToActionResult(await processService.SkipAsync(id, request, this.CurrentUserId(), this.IfMatch(), cancellationToken), Ok);
 
     [HttpPost("{id:guid}/return")]
     public async Task<IActionResult> Return(Guid id, ReturnProcessRequest request, CancellationToken cancellationToken) =>
-        this.ToActionResult(await processService.ReturnAsync(id, request, this.CurrentUserId(), cancellationToken), Ok);
+        this.ToActionResult(await processService.ReturnAsync(id, request, this.CurrentUserId(), this.IfMatch(), cancellationToken), Ok);
 
     [HttpPost("{id:guid}/pause")]
     public async Task<IActionResult> Pause(Guid id, PauseProcessRequest request, CancellationToken cancellationToken) =>
-        this.ToActionResult(await processService.PauseAsync(id, request, this.CurrentUserId(), cancellationToken), Ok);
+        this.ToActionResult(await processService.PauseAsync(id, request, this.CurrentUserId(), this.IfMatch(), cancellationToken), Ok);
 
     /// <summary>The validity of the license this process obtained and when its renewal should start (both optional).</summary>
     [HttpPut("{id:guid}/license")]
     [ProducesResponseType<ProcessResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SetLicense(Guid id, SetLicenseRequest request, CancellationToken cancellationToken) =>
-        this.ToActionResult(await processService.SetLicenseAsync(id, request, this.CurrentUserId(), cancellationToken), Ok);
+        this.ToActionResult(await processService.SetLicenseAsync(id, request, this.CurrentUserId(), this.IfMatch(), cancellationToken), Ok);
 
     /// <summary>Opens the renewal of the license as a new process (same customer and type) and links it to this one.</summary>
     [HttpPost("{id:guid}/renewal")]
@@ -82,20 +89,20 @@ public sealed class ProcessesController(IProcessService processService, IProcess
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> OpenRenewal(Guid id, OpenRenewalRequest request, CancellationToken cancellationToken) =>
         this.ToActionResult(
-            await processService.OpenRenewalAsync(id, request, this.CurrentUserId(), cancellationToken),
+            await processService.OpenRenewalAsync(id, request, this.CurrentUserId(), this.IfMatch(), cancellationToken),
             opened => CreatedAtAction(nameof(Get), new { id = opened.Id }, opened));
 
     [HttpPost("{id:guid}/resume")]
     public async Task<IActionResult> Resume(Guid id, CancellationToken cancellationToken) =>
-        this.ToActionResult(await processService.ResumeAsync(id, this.CurrentUserId(), cancellationToken), Ok);
+        this.ToActionResult(await processService.ResumeAsync(id, this.CurrentUserId(), this.IfMatch(), cancellationToken), Ok);
 
     [HttpPost("{id:guid}/cancel")]
     public async Task<IActionResult> Cancel(Guid id, ProcessReasonRequest request, CancellationToken cancellationToken) =>
-        this.ToActionResult(await processService.CancelAsync(id, request, this.CurrentUserId(), cancellationToken), Ok);
+        this.ToActionResult(await processService.CancelAsync(id, request, this.CurrentUserId(), this.IfMatch(), cancellationToken), Ok);
 
     [HttpPost("{id:guid}/assign")]
     public async Task<IActionResult> Assign(Guid id, AssignProcessRequest request, CancellationToken cancellationToken) =>
-        this.ToActionResult(await processService.AssignAsync(id, request, this.CurrentUserId(), cancellationToken), Ok);
+        this.ToActionResult(await processService.AssignAsync(id, request, this.CurrentUserId(), this.IfMatch(), cancellationToken), Ok);
 
     /// <summary>Which agency an agency step is with (e.g. FEAM instead of the type's default CETESB), until it finishes.</summary>
     [HttpPut("{id:guid}/steps/{stepId:guid}/agency")]
@@ -103,7 +110,7 @@ public sealed class ProcessesController(IProcessService processService, IProcess
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> SetStepAgency(Guid id, Guid stepId, SetStepAgencyRequest request, CancellationToken cancellationToken) =>
-        this.ToActionResult(await processService.SetStepAgencyAsync(id, stepId, request, this.CurrentUserId(), cancellationToken), Ok);
+        this.ToActionResult(await processService.SetStepAgencyAsync(id, stepId, request, this.CurrentUserId(), this.IfMatch(), cancellationToken), Ok);
 
     // ---- documents ----
 
@@ -164,7 +171,7 @@ public sealed class ProcessesController(IProcessService processService, IProcess
 
     [HttpPut("{id:guid}/title")]
     public async Task<IActionResult> Rename(Guid id, RenameProcessRequest request, CancellationToken cancellationToken) =>
-        this.ToActionResult(await processService.RenameAsync(id, request, this.CurrentUserId(), cancellationToken), Ok);
+        this.ToActionResult(await processService.RenameAsync(id, request, this.CurrentUserId(), this.IfMatch(), cancellationToken), Ok);
 
     /// <summary>A note only the staff see.</summary>
     [HttpPost("{id:guid}/notes")]

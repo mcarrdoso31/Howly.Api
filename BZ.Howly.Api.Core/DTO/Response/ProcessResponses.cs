@@ -33,6 +33,10 @@ public sealed record PersonResponse(Guid Id, string Name, string? AvatarVersion)
 
 public sealed record ProcessParentResponse(Guid Id, string Title);
 
+/// <param name="Version">Changes with every change of the process; sent back in If-Match by the actions that move it.</param>
+/// <param name="Events">The newest page of the timeline (oldest first, like always); older ones come from …/events.</param>
+/// <param name="HasMoreEvents">There are older events than <paramref name="Events"/>.</param>
+/// <param name="EventsCursor">Where …/events?before= continues when there are older events; null otherwise.</param>
 public sealed record ProcessResponse(
     Guid Id,
     string Title,
@@ -53,7 +57,18 @@ public sealed record ProcessResponse(
     IReadOnlyList<ProcessListItemResponse> Children,
     IReadOnlyList<ProcessDocumentResponse> Documents,
     PauseResponse? Pause = null,
-    LicenseResponse? License = null);
+    LicenseResponse? License = null,
+    string? Version = null,
+    bool HasMoreEvents = false,
+    string? EventsCursor = null);
+
+/// <summary>A page of the timeline, newest first; <paramref name="NextCursor"/> brings the older ones (null at the start of it).</summary>
+public sealed record ProcessEventPageResponse(IReadOnlyList<ProcessEventResponse> Items, string? NextCursor)
+{
+    /// <summary>Events in the details and in each page by default; a page brings at most <see cref="MaxSize"/>.</summary>
+    public const int DefaultSize = 20;
+    public const int MaxSize = 100;
+}
 
 /// <summary>The license this process obtained, when told: validity, renewal start and the renewal process once opened.</summary>
 public sealed record LicenseResponse(DateOnly? ExpiresOn, DateOnly? RenewalStartsOn, Guid? RenewalProcessId)

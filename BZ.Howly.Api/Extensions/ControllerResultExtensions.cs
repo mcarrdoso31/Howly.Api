@@ -1,3 +1,4 @@
+using BZ.Howly.Api.Core.DTO.Response;
 using BZ.Howly.Api.Core.Shared;
 using BZ.Howly.Api.Utils.Security;
 using Microsoft.AspNetCore.Mvc;
@@ -17,6 +18,18 @@ public static class ControllerResultExtensions
                 result.Errors.ToDictionary(e => e.Key, e => e.Value))),
             _ => throw new ArgumentOutOfRangeException(nameof(result), result.Status, null),
         };
+
+    /// <summary>The process version the client acted on (If-Match), as sent; null when it did not say (nothing is checked then).</summary>
+    public static string? IfMatch(this ControllerBase controller) =>
+        controller.Request.Headers.IfMatch is { Count: > 0 } ifMatch ? ifMatch.ToString() : null;
+
+    /// <summary>The process as JSON with its version as ETag, so a later If-Match can say which one the screen showed.</summary>
+    public static IActionResult OkWithETag(this ControllerBase controller, ProcessResponse process)
+    {
+        if (process.Version is { } version)
+            controller.Response.Headers.ETag = $"\"{version}\"";
+        return controller.Ok(process);
+    }
 
     public static Guid CurrentUserId(this ControllerBase controller) =>
         Guid.Parse(controller.User.FindFirst(JwtClaimTypes.Subject)!.Value);
