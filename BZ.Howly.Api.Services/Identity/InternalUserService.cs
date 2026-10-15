@@ -47,7 +47,7 @@ public sealed partial class InternalUserService(
             if (!created.Succeeded)
                 throw new InvalidOperationException($"Could not create internal user: {string.Join("; ", created.Errors)}");
 
-            logger.LogInformation("Internal user {UserId} ({Username}, {Role}) created.", created.Account!.Id, username, request.Role);
+            logger.LogInformation("Internal user {UserId} ({Role}) created.", created.Account!.Id, request.Role);
 
             return OperationResult<InternalUserCreatedResponse>.Success(
                 new InternalUserCreatedResponse(created.Account.Id, username, displayName, request.Role, temporaryPassword));

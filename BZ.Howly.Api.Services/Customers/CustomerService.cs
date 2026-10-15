@@ -49,7 +49,7 @@ public sealed class CustomerService(
             await customerRepository.AddAsync(customer, ct);
             await customerRepository.SaveChangesAsync(ct);
 
-            logger.LogInformation("Customer {CustomerId} ({Document}) created by {UserId}.", customer.Id, document.Value, createdBy);
+            logger.LogInformation("Customer {CustomerId} created by {UserId}.", customer.Id, createdBy);
 
             return OperationResult<CustomerCreatedResponse>.Success(new CustomerCreatedResponse(
                 customer.Id, customer.Document.Value, customer.CompanyName, ContactResponse.From(customer.Contacts), temporaryPassword));

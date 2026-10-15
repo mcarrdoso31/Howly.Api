@@ -50,7 +50,7 @@ app.UseStatusCodePages();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.MapOpenApi().AllowAnonymous();
     // Production applies migrations as a deploy step (migration bundle): N instances starting together must not race.
     await app.SeedDevelopmentDataAsync();
 }
@@ -67,7 +67,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health").AllowAnonymous();
 app.MapControllers();
 
 app.Run();

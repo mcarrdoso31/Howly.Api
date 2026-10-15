@@ -100,7 +100,11 @@ public sealed class AuthService(
 
         var user = await userAccountStore.FindByUsernameAsync(username, cancellationToken);
         if (user is null || !user.HasAnyRole(allowedRoles))
+        {
+            // The same work as a real check: the answer time does not tell which accounts exist here.
+            await userAccountStore.SimulatePasswordCheckAsync(password, cancellationToken);
             return LoginResult.InvalidCredentials;
+        }
 
         var passwordCheck = await userAccountStore.CheckPasswordAsync(user.Id, password, cancellationToken);
         if (passwordCheck != PasswordCheckResult.Success)

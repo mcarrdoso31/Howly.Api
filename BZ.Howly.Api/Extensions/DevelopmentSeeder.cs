@@ -83,7 +83,7 @@ public static class DevelopmentSeeder
         }
 
         await userManager.AddToRoleAsync(user, role);
-        logger.LogInformation("Seeded {Role} {Username}.", role, username);
+        logger.LogInformation("Seeded a {Role}.", role);
         return user;
     }
 
@@ -121,7 +121,7 @@ public static class DevelopmentSeeder
 
         await customers.AddAsync(Customer.Create(document, companyName, contacts, user.Id, createdBy, DateTimeOffset.UtcNow));
         await customers.SaveChangesAsync();
-        Logger(services).LogInformation("Seeded customer company {Company}.", companyName);
+        Logger(services).LogInformation("Seeded the sample customer.");
     }
 
     /// <summary>A few agencies to try the catalog and the agency steps with; only into an empty catalog.</summary>

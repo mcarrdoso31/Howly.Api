@@ -19,6 +19,7 @@ using BZ.Howly.Api.Tenancy;
 using BZ.Howly.Api.Utils.Security;
 using BZ.Howly.Api.Utils.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -178,6 +179,8 @@ public static class ServiceCollectionExtensions
             });
 
         services.AddAuthorizationBuilder()
+            // An endpoint without [Authorize]/[AllowAnonymous] still needs a sign-in: forgetting the attribute does not open it.
+            .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
             .AddPolicy(Policies.Internal, p => p.RequireRole(Roles.Internal))
             .AddPolicy(Policies.Customer, p => p.RequireRole(Roles.Customer))
             .AddPolicy(Policies.AdminOnly, p => p.RequireRole(Roles.Admin));

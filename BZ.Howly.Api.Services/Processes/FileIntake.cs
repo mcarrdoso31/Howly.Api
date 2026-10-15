@@ -31,7 +31,8 @@ internal static class FileIntake
         if (check != UploadCheck.Accepted)
         {
             if (check is UploadCheck.BlockedType or UploadCheck.BlockedContent)
-                logger.LogWarning("Refused upload {FileName}: {Check}.", UploadPolicy.CleanFileName(file.FileName), check);
+                // Only the extension: file names often carry people's names (LGPD).
+                logger.LogWarning("Refused upload ({Extension}): {Check}.", Path.GetExtension(UploadPolicy.CleanFileName(file.FileName)), check);
             return (null, FileError(check switch
             {
                 UploadCheck.BlockedType or UploadCheck.BlockedContent => "Executables, scripts and web pages are not accepted.",

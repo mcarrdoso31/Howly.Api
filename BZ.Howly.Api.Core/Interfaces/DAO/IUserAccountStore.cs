@@ -20,6 +20,13 @@ public interface IUserAccountStore
     /// <summary>Checks the password and applies lockout rules (failed attempts count, lockout window).</summary>
     Task<PasswordCheckResult> CheckPasswordAsync(Guid userId, string password, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Does the work of a password check against no account: a sign-in for an account that does not exist (or of
+    /// another profile) takes as long as a real one, so the answer time does not tell which CPFs/CNPJs are customers.
+    /// Stores without password hashing have nothing to imitate.
+    /// </summary>
+    Task SimulatePasswordCheckAsync(string password, CancellationToken cancellationToken = default) => Task.CompletedTask;
+
     /// <summary>Creates the user with <paramref name="temporaryPassword"/> and flags it to change the password on first access.</summary>
     Task<UserCreationResult> CreateAsync(NewUserAccount user, string temporaryPassword, CancellationToken cancellationToken = default);
 

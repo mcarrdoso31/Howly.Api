@@ -9,6 +9,8 @@ namespace BZ.Howly.Api.DAO.Identity;
 /// <summary>Adapts ASP.NET Core Identity to the domain's <see cref="IUserAccountStore"/>.</summary>
 public sealed class UserAccountStore(UserManager<AppUser> userManager, HowlyDbContext context) : IUserAccountStore
 {
+    private static readonly AppUser Decoy = new() { UserName = "decoy" };
+    private static string? _decoyHash;
     private const string PasswordMismatch = "PasswordMismatch";
     private const string DuplicateUserName = "DuplicateUserName";
 
@@ -88,7 +90,11 @@ public sealed class UserAccountStore(UserManager<AppUser> userManager, HowlyDbCo
             return PasswordCheckResult.Invalid;
 
         if (await userManager.IsLockedOutAsync(user))
+        {
+            // As long as a real check: a locked account is not told apart by the answer time either.
+            await SimulatePasswordCheckAsync(password, cancellationToken);
             return PasswordCheckResult.LockedOut;
+        }
 
         if (await userManager.CheckPasswordAsync(user, password))
         {
@@ -98,6 +104,14 @@ public sealed class UserAccountStore(UserManager<AppUser> userManager, HowlyDbCo
 
         await userManager.AccessFailedAsync(user);
         return await userManager.IsLockedOutAsync(user) ? PasswordCheckResult.LockedOut : PasswordCheckResult.Invalid;
+    }
+
+    public Task SimulatePasswordCheckAsync(string password, CancellationToken cancellationToken = default)
+    {
+        var hasher = userManager.PasswordHasher;
+        var decoyHash = _decoyHash ??= hasher.HashPassword(Decoy, Guid.NewGuid().ToString("N"));
+        hasher.VerifyHashedPassword(Decoy, decoyHash, password);
+        return Task.CompletedTask;
     }
 
     public async Task<UserCreationResult> CreateAsync(NewUserAccount newUser, string temporaryPassword, CancellationToken cancellationToken = default)
