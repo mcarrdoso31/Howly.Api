@@ -100,6 +100,11 @@ public sealed class ProcessDocument
     public string Name { get; private set; } = string.Empty;
     public bool IsRequired { get; private set; }
 
+    /// <summary>Requested documents: the example the type had when the process was opened, if any.</summary>
+    public Guid? ExampleId { get; private set; }
+
+    public string? ExampleFileName { get; private set; }
+
     /// <summary>Order inside the step, as configured in the type.</summary>
     public int Position { get; private set; }
 
@@ -118,7 +123,16 @@ public sealed class ProcessDocument
     private ProcessDocument() { }
 
     public static ProcessDocument Requested(Guid processId, Guid stepId, string name, bool isRequired, int position) =>
-        New(processId, stepId, DocumentKind.Requested, name, isRequired, position);
+        Requested(processId, stepId, new DocumentRequirement(name, isRequired), position);
+
+    /// <summary>A field of the process for a document its type asks for, with the type's example (if any).</summary>
+    public static ProcessDocument Requested(Guid processId, Guid stepId, DocumentRequirement requirement, int position)
+    {
+        var document = New(processId, stepId, DocumentKind.Requested, requirement.Name!, requirement.IsRequired, position);
+        document.ExampleId = requirement.ExampleId;
+        document.ExampleFileName = requirement.ExampleId is null ? null : requirement.ExampleFileName;
+        return document;
+    }
 
     public static ProcessDocument Deliverable(Guid processId, Guid stepId, string name, int position) =>
         New(processId, stepId, DocumentKind.Deliverable, name, false, position);

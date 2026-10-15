@@ -21,7 +21,9 @@ public sealed record StepTemplateDetails(
     Guid? AgencyId = null);
 
 /// <summary>A document a step asks for (e.g. "Licença de operação de máquinas agrícolas").</summary>
-public sealed record DocumentRequirement(string? Name, bool IsRequired);
+/// <param name="ExampleId">A <see cref="DocumentExample"/> for the customer to download and follow.</param>
+/// <param name="ExampleFileName">The example's file name, set by the server from <paramref name="ExampleId"/>.</param>
+public sealed record DocumentRequirement(string? Name, bool IsRequired, Guid? ExampleId = null, string? ExampleFileName = null);
 
 /// <summary>A step of a <see cref="ProcessType"/>. Processes copy these when they are opened.</summary>
 public sealed class StepTemplate
@@ -75,7 +77,7 @@ public sealed class StepTemplate
         IsOptional = details.IsOptional,
         CustomerChecklist = ProcessText.Blank(details.CustomerChecklist),
         DeliveryChecklist = ProcessText.Blank(details.DeliveryChecklist),
-        Documents = (details.Documents ?? []).Select(d => new DocumentRequirement(d.Name!.Trim(), d.IsRequired)).ToList(),
+        Documents = (details.Documents ?? []).Select(d => new DocumentRequirement(d.Name!.Trim(), d.IsRequired, d.ExampleId, d.ExampleId is null ? null : d.ExampleFileName)).ToList(),
         Deliverables = (details.Deliverables ?? []).Select(d => d.Trim()).ToList(),
     };
 }

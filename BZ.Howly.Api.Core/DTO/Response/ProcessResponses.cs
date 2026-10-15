@@ -54,6 +54,7 @@ public sealed record ProcessResponse(
 
 /// <param name="StepId">Null for extra documents, which belong to the whole process.</param>
 /// <param name="MayContainMacros">Office format that can carry macros: the screens warn before opening it.</param>
+/// <param name="ExampleFileName">Requested documents with an example to download (…/documents/{id}/example).</param>
 public sealed record ProcessDocumentResponse(
     Guid Id,
     Guid? StepId,
@@ -62,13 +63,15 @@ public sealed record ProcessDocumentResponse(
     bool IsRequired,
     DocumentStatus Status,
     bool MayContainMacros,
-    IReadOnlyList<DocumentVersionResponse> Versions)
+    IReadOnlyList<DocumentVersionResponse> Versions,
+    string? ExampleFileName = null)
 {
     public static ProcessDocumentResponse From(ProcessDocument d) => new(
         d.Id, d.StepId, d.Kind, d.Name, d.IsRequired, d.Status,
         d.LatestVersion is { } latest && Shared.UploadPolicy.MayContainMacros(latest.FileName),
         d.Versions.Select(v => new DocumentVersionResponse(
-            v.Id, v.Number, v.FileName, v.Size, v.UploadedByName, v.UploadedAt, v.Status, v.ReviewReason, v.ReviewedByName, v.ReviewedAt)).ToList());
+            v.Id, v.Number, v.FileName, v.Size, v.UploadedByName, v.UploadedAt, v.Status, v.ReviewReason, v.ReviewedByName, v.ReviewedAt)).ToList(),
+        d.ExampleFileName);
 }
 
 public sealed record DocumentVersionResponse(

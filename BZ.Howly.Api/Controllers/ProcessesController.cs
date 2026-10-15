@@ -130,6 +130,11 @@ public sealed class ProcessesController(IProcessService processService, IProcess
     public async Task<IActionResult> DownloadDocument(Guid id, Guid documentId, Guid versionId, CancellationToken cancellationToken) =>
         this.Download(await documentService.OpenAsync(id, documentId, versionId, null, cancellationToken));
 
+    /// <summary>The example file of a requested document, to follow when preparing it.</summary>
+    [HttpGet("{id:guid}/documents/{documentId:guid}/example")]
+    public async Task<IActionResult> DownloadExample(Guid id, Guid documentId, CancellationToken cancellationToken) =>
+        this.Download(await documentService.OpenExampleAsync(id, documentId, null, cancellationToken));
+
     /// <summary>Room for a 25 MB file plus the multipart envelope.</summary>
     internal const long UploadLimit = UploadPolicy.MaxBytes + 1024 * 1024;
 

@@ -68,6 +68,11 @@ public sealed class MyProcessesController(IProcessService processService, IProce
     public async Task<IActionResult> DownloadDocument(Guid id, Guid documentId, Guid versionId, CancellationToken cancellationToken) =>
         this.Download(await documentService.OpenAsync(id, documentId, versionId, this.CurrentUserId(), cancellationToken));
 
+    /// <summary>The example file of a requested document, to follow when preparing it.</summary>
+    [HttpGet("{id:guid}/documents/{documentId:guid}/example")]
+    public async Task<IActionResult> DownloadExample(Guid id, Guid documentId, CancellationToken cancellationToken) =>
+        this.Download(await documentService.OpenExampleAsync(id, documentId, this.CurrentUserId(), cancellationToken));
+
     private IActionResult MissingFile() =>
         ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]> { ["file"] = ["Send the file in the \"file\" field."] }));
 }

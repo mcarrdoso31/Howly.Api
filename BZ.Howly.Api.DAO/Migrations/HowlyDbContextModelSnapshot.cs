@@ -279,6 +279,41 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.ToTable("Notifications", (string)null);
                 });
 
+            modelBuilder.Entity("BZ.Howly.Api.Core.Processes.DocumentExample", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FileKey")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(150)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("UploadedById")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("DocumentExamples", (string)null);
+                });
+
             modelBuilder.Entity("BZ.Howly.Api.Core.Processes.Process", b =>
                 {
                     b.Property<Guid>("Id")
@@ -400,6 +435,13 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("ExampleFileName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid?>("ExampleId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsRequired")
                         .HasColumnType("bit");
 
@@ -435,6 +477,8 @@ namespace BZ.Howly.Api.DAO.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ExampleId");
 
                     b.HasIndex("TenantId");
 
@@ -936,6 +980,15 @@ namespace BZ.Howly.Api.DAO.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("BZ.Howly.Api.Core.Processes.DocumentExample", b =>
+                {
+                    b.HasOne("BZ.Howly.Api.Core.Tenancy.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("BZ.Howly.Api.Core.Processes.Process", b =>
                 {
                     b.HasOne("BZ.Howly.Api.DAO.Identity.AppUser", null)
@@ -1109,6 +1162,11 @@ namespace BZ.Howly.Api.DAO.Migrations
 
             modelBuilder.Entity("BZ.Howly.Api.Core.Processes.ProcessDocument", b =>
                 {
+                    b.HasOne("BZ.Howly.Api.Core.Processes.DocumentExample", null)
+                        .WithMany()
+                        .HasForeignKey("ExampleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("BZ.Howly.Api.Core.Processes.Process", null)
                         .WithMany()
                         .HasForeignKey("ProcessId")

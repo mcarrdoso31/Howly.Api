@@ -17,6 +17,8 @@ public sealed class ProcessDocumentConfiguration : IEntityTypeConfiguration<Proc
         builder.Property(d => d.Name).HasMaxLength(ProcessDocument.MaxNameLength).IsRequired();
         builder.Property(d => d.Kind).HasConversion<string>().HasMaxLength(EnumLength);
         builder.Property(d => d.Status).HasConversion<string>().HasMaxLength(EnumLength);
+        builder.Property(d => d.ExampleFileName).HasMaxLength(UploadPolicy.MaxFileNameLength);
+        builder.HasOne<DocumentExample>().WithMany().HasForeignKey(d => d.ExampleId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(d => d.Version).IsConcurrencyToken();
         builder.Ignore(d => d.LatestVersion);
         builder.Ignore(d => d.IsPending);

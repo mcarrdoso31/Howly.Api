@@ -32,7 +32,7 @@ public sealed class HowlyDbContext(DbContextOptions<HowlyDbContext> options, ITe
     private static readonly Type[] TenantOwnedTypes =
     [
         typeof(AppUser), typeof(Customer), typeof(UserPreferences), typeof(RefreshToken), typeof(Agency),
-        typeof(ProcessType), typeof(Process), typeof(ProcessDocument), typeof(Notification),
+        typeof(ProcessType), typeof(Process), typeof(ProcessDocument), typeof(DocumentExample), typeof(Notification),
     ];
 
     private static readonly PropertyInfo CurrentTenantIdProperty =
@@ -42,6 +42,7 @@ public sealed class HowlyDbContext(DbContextOptions<HowlyDbContext> options, ITe
     public DbSet<JobRun> JobRuns => Set<JobRun>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Agency> Agencies => Set<Agency>();
+    public DbSet<DocumentExample> DocumentExamples => Set<DocumentExample>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<UserPreferences> UserPreferences => Set<UserPreferences>();
     public DbSet<ProcessType> ProcessTypes => Set<ProcessType>();

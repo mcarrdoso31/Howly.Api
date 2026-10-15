@@ -29,3 +29,6 @@ public sealed record StepTemplateResponse(
     IReadOnlyList<DocumentRequirement> Documents,
     IReadOnlyList<string> Deliverables,
     Guid? AgencyId);
+
+/// <summary>An example file just uploaded: its id goes in a requested document of the type.</summary>
+public sealed record DocumentExampleResponse(Guid Id, string FileName, long Size);

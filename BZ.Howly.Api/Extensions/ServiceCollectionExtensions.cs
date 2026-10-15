@@ -118,6 +118,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IJobLock, DatabaseJobLock>();
         services.AddScoped<IAgencyRepository, AgencyRepository>();
+        services.AddScoped<IDocumentExampleRepository, DocumentExampleRepository>();
         services.AddSingleton<IPasswordGenerator, PasswordGenerator>();
 
         services.AddScoped<IAuthService, AuthService>();
@@ -134,6 +135,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPauseReturnService, PauseReturnService>();
         services.AddScoped<ITenantProfileService, TenantProfileService>();
         services.AddScoped<IAgencyService, AgencyService>();
+        services.AddScoped<IDocumentExampleService, DocumentExampleService>();
 
         return services;
     }

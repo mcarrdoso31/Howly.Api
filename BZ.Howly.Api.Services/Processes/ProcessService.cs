@@ -85,7 +85,7 @@ public sealed class ProcessService(
         {
             for (var i = 0; i < template.Documents.Count; i++)
                 await documentRepository.AddAsync(
-                    ProcessDocument.Requested(process.Id, step.Id, template.Documents[i].Name!, template.Documents[i].IsRequired, i), cancellationToken);
+                    ProcessDocument.Requested(process.Id, step.Id, template.Documents[i], i), cancellationToken);
             for (var i = 0; i < template.Deliverables.Count; i++)
                 await documentRepository.AddAsync(ProcessDocument.Deliverable(process.Id, step.Id, template.Deliverables[i], i), cancellationToken);
         }

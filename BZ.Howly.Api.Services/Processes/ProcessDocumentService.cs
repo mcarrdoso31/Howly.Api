@@ -12,6 +12,7 @@ namespace BZ.Howly.Api.Services.Processes;
 public sealed class ProcessDocumentService(
     IProcessRepository processRepository,
     IProcessDocumentRepository documentRepository,
+    IDocumentExampleRepository exampleRepository,
     ICustomerRepository customerRepository,
     IUserAccountStore userAccountStore,
     IFileStorage fileStorage,
@@ -21,9 +22,6 @@ public sealed class ProcessDocumentService(
     ILogger<ProcessDocumentService> logger) : IProcessDocumentService
 {
     private const string Folder = "documents";
-
-    /// <summary>Files keep a neutral extension on disk: the original name lives in the database and comes back on download.</summary>
-    private const string StoredExtension = ".bin";
 
     public async Task<OperationResult<ProcessResponse>> UploadAsync(
         Guid processId, Guid documentId, IncomingFile file, Guid actorId, Guid? customerUserId, CancellationToken cancellationToken = default)
@@ -114,6 +112,18 @@ public sealed class ProcessDocumentService(
         return stream is null ? null : new DocumentFile(stream, version.FileName);
     }
 
+    public async Task<DocumentFile?> OpenExampleAsync(Guid processId, Guid documentId, Guid? customerUserId, CancellationToken cancellationToken = default)
+    {
+        var process = await FindProcessAsync(processId, customerUserId, cancellationToken);
+        var document = process is null ? null : await documentRepository.FindAsync(processId, documentId, cancellationToken);
+        var example = document?.ExampleId is { } exampleId ? await exampleRepository.FindAsync(exampleId, cancellationToken) : null;
+        if (example is null)
+            return null;
+
+        var stream = await fileStorage.OpenReadAsync(example.FileKey, cancellationToken);
+        return stream is null ? null : new DocumentFile(stream, example.FileName);
+    }
+
     private async Task<OperationResult<ProcessResponse>> ReviewAsync(
         Guid processId, Guid documentId, Guid actorId, ProcessEventType eventType, string? reason,
         Action<ProcessDocument, Actor, DateTimeOffset> review, CancellationToken cancellationToken)
@@ -146,39 +156,8 @@ public sealed class ProcessDocumentService(
         return await ResponseAsync(processId, null, cancellationToken);
     }
 
-    /// <summary>Checks and stores the file; on a refusal the errors point to the "file" field.</summary>
-    private async Task<(StoredFile? File, Dictionary<string, string[]>? Errors)> StoreAsync(IncomingFile file, CancellationToken cancellationToken)
-    {
-        using var buffer = new MemoryStream();
-        var chunk = new byte[81920];
-        int read;
-        while ((read = await file.Content.ReadAsync(chunk, cancellationToken)) > 0)
-        {
-            if (buffer.Length + read > UploadPolicy.MaxBytes)
-                return (null, FileError("The file must have at most 25 MB."));
-            buffer.Write(chunk, 0, read);
-        }
-
-        var header = buffer.GetBuffer().AsSpan(0, (int)Math.Min(buffer.Length, UploadPolicy.HeaderLength));
-        var check = UploadPolicy.Check(file.FileName, header);
-        if (check != UploadCheck.Accepted)
-        {
-            if (check is UploadCheck.BlockedType or UploadCheck.BlockedContent)
-                logger.LogWarning("Refused upload {FileName}: {Check}.", UploadPolicy.CleanFileName(file.FileName), check);
-            return (null, FileError(check switch
-            {
-                UploadCheck.BlockedType or UploadCheck.BlockedContent => "Executables, scripts and web pages are not accepted.",
-                UploadCheck.Empty => "The file is empty.",
-                _ => "The file needs a name with an extension.",
-            }));
-        }
-
-        buffer.Position = 0;
-        var key = await fileStorage.SaveAsync(Folder, StoredExtension, buffer, cancellationToken);
-        return (new StoredFile(key, UploadPolicy.CleanFileName(file.FileName), buffer.Length), null);
-    }
-
-    private static Dictionary<string, string[]> FileError(string message) => new() { ["file"] = [message] };
+    private Task<(StoredFile? File, Dictionary<string, string[]>? Errors)> StoreAsync(IncomingFile file, CancellationToken cancellationToken) =>
+        FileIntake.StoreAsync(fileStorage, Folder, file, logger, cancellationToken);
 
     /// <summary>
     /// The database part of an upload. When it surely did not save (a rule, a conflict, invalid data), the file just

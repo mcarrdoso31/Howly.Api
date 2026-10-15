@@ -7,7 +7,8 @@ using BZ.Howly.Api.Core.Shared;
 
 namespace BZ.Howly.Api.Services.Processes;
 
-public sealed class ProcessTypeService(IProcessTypeRepository repository, IAgencyRepository agencies, TimeProvider timeProvider) : IProcessTypeService
+public sealed class ProcessTypeService(
+    IProcessTypeRepository repository, IAgencyRepository agencies, IDocumentExampleRepository examples, TimeProvider timeProvider) : IProcessTypeService
 {
     public Task<IReadOnlyList<ProcessTypeListItemResponse>> ListAsync(bool includeInactive, CancellationToken cancellationToken = default) =>
         repository.ListAsync(includeInactive, cancellationToken);
@@ -66,7 +67,8 @@ public sealed class ProcessTypeService(IProcessTypeRepository repository, IAgenc
 
     /// <summary>
     /// The steps of the request, validated, with each chosen agency checked (it exists in this consultancy and is
-    /// active, unless the type already had it) and its acronym as the agency name.
+    /// active, unless the type already had it) and its acronym as the agency name, and each document example checked
+    /// (uploaded in this consultancy) with its own file name.
     /// </summary>
     private async Task<(IReadOnlyList<StepTemplateDetails> Steps, IReadOnlyDictionary<string, string[]> Errors)> StepsAsync(
         ProcessTypeRequest request, IReadOnlySet<Guid> kept, CancellationToken cancellationToken)
@@ -84,6 +86,26 @@ public sealed class ProcessTypeService(IProcessTypeRepository repository, IAgenc
                 errors[$"steps[{i}].agencyId"] = ["Choose an active agency of the catalog."];
             else
                 steps[i] = steps[i] with { AgencyName = agency.DisplayName };
+        }
+
+        var exampleIds = steps.SelectMany(s => s.Documents ?? []).Where(d => d?.ExampleId is not null).Select(d => d!.ExampleId!.Value).ToHashSet();
+        var uploaded = (await examples.FindManyAsync(exampleIds, cancellationToken)).ToDictionary(e => e.Id);
+        for (var i = 0; i < steps.Count; i++)
+        {
+            if (steps[i].Documents is not { } documents)
+                continue;
+            var checkedDocuments = documents.ToList();
+            for (var j = 0; j < checkedDocuments.Count; j++)
+            {
+                if (checkedDocuments[j]?.ExampleId is not { } exampleId)
+                    continue;
+                if (uploaded.TryGetValue(exampleId, out var example))
+                    checkedDocuments[j] = checkedDocuments[j] with { ExampleFileName = example.FileName };
+                else
+                    errors[$"steps[{i}].documents[{j}].exampleId"] = ["Upload the example file again."];
+            }
+
+            steps[i] = steps[i] with { Documents = checkedDocuments };
         }
 
         return (steps, errors);

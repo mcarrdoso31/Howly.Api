@@ -31,4 +31,7 @@ public interface IProcessDocumentService
     Task<OperationResult<ProcessResponse>> ReopenAsync(Guid processId, Guid documentId, Guid actorId, CancellationToken cancellationToken = default);
 
     Task<DocumentFile?> OpenAsync(Guid processId, Guid documentId, Guid versionId, Guid? customerUserId, CancellationToken cancellationToken = default);
+
+    /// <summary>The example file of a requested document; null when it has none.</summary>
+    Task<DocumentFile?> OpenExampleAsync(Guid processId, Guid documentId, Guid? customerUserId, CancellationToken cancellationToken = default);
 }
