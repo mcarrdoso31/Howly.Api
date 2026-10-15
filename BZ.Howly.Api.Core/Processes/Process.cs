@@ -118,6 +118,8 @@ public sealed class Process
         process._steps.OrderBy(s => s.Position).First().Start(now);
         process.Record(ProcessEventType.Opened, openedBy, now);
         process.RefreshActiveStep(now);
+        // Completing or cancelling the parent at this same moment now conflicts, instead of leaving it finished with an open child.
+        parent?.BumpVersion();
         return process;
     }
 
@@ -475,6 +477,9 @@ public sealed class Process
         ActiveStepDueAt = active?.DueAt;
         Touch(now);
     }
+
+    /// <summary>Changes only the version: a concurrent change conflicts; the timeline and the last change stay as they are.</summary>
+    private void BumpVersion() => Version = Guid.NewGuid();
 
     private void Touch(DateTimeOffset now)
     {

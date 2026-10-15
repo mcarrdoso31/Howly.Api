@@ -43,6 +43,18 @@ public sealed class ProcessService(
 
     public async Task<OperationResult<ProcessResponse>> OpenAsync(OpenProcessRequest request, Guid actorId, CancellationToken cancellationToken = default)
     {
+        var (process, failure) = await AddOpenedAsync(request, actorId, cancellationToken);
+        if (process is null)
+            return failure!;
+
+        await processRepository.SaveChangesAsync(cancellationToken);
+        return OperationResult<ProcessResponse>.Success(await ToResponseAsync(process, cancellationToken));
+    }
+
+    /// <summary>Validates and adds a new process (with its documents and notices) without saving: the caller saves it.</summary>
+    private async Task<(Process? Process, OperationResult<ProcessResponse>? Failure)> AddOpenedAsync(
+        OpenProcessRequest request, Guid actorId, CancellationToken cancellationToken)
+    {
         var errors = new Dictionary<string, string[]>(Process.ValidateTitle(request.Title));
 
         if (await customerRepository.FindByIdAsync(request.CustomerId, cancellationToken) is null)
@@ -66,7 +78,7 @@ public sealed class ProcessService(
         }
 
         if (errors.Count > 0)
-            return OperationResult<ProcessResponse>.Invalid(errors);
+            return (null, OperationResult<ProcessResponse>.Invalid(errors));
 
         Process process;
         try
@@ -75,7 +87,7 @@ public sealed class ProcessService(
         }
         catch (ProcessRuleException exception)
         {
-            return OperationResult<ProcessResponse>.Conflict(exception.Message);
+            return (null, OperationResult<ProcessResponse>.Conflict(exception.Message));
         }
 
         await processRepository.AddAsync(process, cancellationToken);
@@ -91,9 +103,7 @@ public sealed class ProcessService(
         }
 
         await notificationService.NotifyAsync(process, 0, actorId, cancellationToken);
-        await processRepository.SaveChangesAsync(cancellationToken);
-
-        return OperationResult<ProcessResponse>.Success(await ToResponseAsync(process, cancellationToken));
+        return (process, null);
     }
 
     /// <remarks>
@@ -191,16 +201,17 @@ public sealed class ProcessService(
             return OperationResult<ProcessResponse>.Conflict("The renewal of this license was already opened, or the process was cancelled.");
 
         // Same customer and type (the type may have changed since: the renewal follows it as it is now).
-        var opened = await OpenAsync(
+        var (renewal, failure) = await AddOpenedAsync(
             new OpenProcessRequest(process.CustomerId, process.ProcessTypeId, request.Title, request.AssigneeId ?? process.AssigneeId, null), actorId, cancellationToken);
-        if (opened.Status != OperationStatus.Success)
-            return opened;
+        if (renewal is null)
+            return failure!;
 
         var eventsBefore = process.Events.Count;
-        process.LinkRenewal(opened.Value!.Id, opened.Value.Title, await ActorAsync(actorId, cancellationToken), timeProvider.GetUtcNow());
+        process.LinkRenewal(renewal.Id, renewal.Title, await ActorAsync(actorId, cancellationToken), timeProvider.GetUtcNow());
         await notificationService.NotifyAsync(process, eventsBefore, actorId, cancellationToken);
+        // One save: the renewal exists only together with its link (a concurrent change of the original saves neither).
         await processRepository.SaveChangesAsync(cancellationToken);
-        return opened;
+        return OperationResult<ProcessResponse>.Success(await ToResponseAsync(renewal, cancellationToken));
     }
 
     public async Task<OperationResult<ProcessResponse>> CancelAsync(Guid id, ProcessReasonRequest request, Guid actorId, CancellationToken cancellationToken = default)
