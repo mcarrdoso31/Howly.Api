@@ -46,7 +46,7 @@ public sealed class UserAccountStore(UserManager<AppUser> userManager, HowlyDbCo
         }
 
         var total = await query.CountAsync(cancellationToken);
-        var users = await query.OrderBy(u => u.DisplayName).Skip(skip).Take(take).ToListAsync(cancellationToken);
+        var users = await query.OrderBy(u => u.DisplayName).ThenBy(u => u.Id).Skip(skip).Take(take).ToListAsync(cancellationToken);
 
         var userIds = users.Select(u => u.Id).ToList();
         var rolesByUser = (await (

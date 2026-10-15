@@ -16,18 +16,14 @@ internal static class FileIntake
     public static async Task<(StoredFile? File, Dictionary<string, string[]>? Errors)> StoreAsync(
         IFileStorage fileStorage, string folder, IncomingFile file, ILogger logger, CancellationToken cancellationToken)
     {
-        using var buffer = new MemoryStream();
-        var chunk = new byte[81920];
+        // Only the first bytes are read here, to check the type; the rest goes straight to the storage.
+        var header = new byte[UploadPolicy.HeaderLength];
+        var headerLength = 0;
         int read;
-        while ((read = await file.Content.ReadAsync(chunk, cancellationToken)) > 0)
-        {
-            if (buffer.Length + read > UploadPolicy.MaxBytes)
-                return (null, FileError("The file must have at most 25 MB."));
-            buffer.Write(chunk, 0, read);
-        }
+        while (headerLength < header.Length && (read = await file.Content.ReadAsync(header.AsMemory(headerLength), cancellationToken)) > 0)
+            headerLength += read;
 
-        var header = buffer.GetBuffer().AsSpan(0, (int)Math.Min(buffer.Length, UploadPolicy.HeaderLength));
-        var check = UploadPolicy.Check(file.FileName, header);
+        var check = UploadPolicy.Check(file.FileName, header.AsSpan(0, headerLength));
         if (check != UploadCheck.Accepted)
         {
             if (check is UploadCheck.BlockedType or UploadCheck.BlockedContent)
@@ -41,9 +37,85 @@ internal static class FileIntake
             }));
         }
 
-        buffer.Position = 0;
-        var key = await fileStorage.SaveAsync(folder, StoredExtension, buffer, cancellationToken);
-        return (new StoredFile(key, UploadPolicy.CleanFileName(file.FileName), buffer.Length), null);
+        var content = new CappedStream(header.AsMemory(0, headerLength), file.Content, UploadPolicy.MaxBytes);
+        string key;
+        try
+        {
+            key = await fileStorage.SaveAsync(folder, StoredExtension, content, cancellationToken);
+        }
+        catch (FileTooLargeException)
+        {
+            // The storage leaves nothing behind for a copy cut halfway.
+            return (null, FileError("The file must have at most 25 MB."));
+        }
+
+        return (new StoredFile(key, UploadPolicy.CleanFileName(file.FileName), content.BytesRead), null);
+    }
+
+    private sealed class FileTooLargeException() : Exception("The file is over the upload limit.");
+
+    /// <summary>The header already read, then the rest of the upload; stops the copy once it goes over the limit.</summary>
+    private sealed class CappedStream(ReadOnlyMemory<byte> header, Stream rest, long maxBytes) : Stream
+    {
+        private ReadOnlyMemory<byte> _header = header;
+
+        public long BytesRead { get; private set; }
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => BytesRead; set => throw new NotSupportedException(); }
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            int read;
+            if (!_header.IsEmpty)
+            {
+                read = Math.Min(buffer.Length, _header.Length);
+                _header[..read].CopyTo(buffer);
+                _header = _header[read..];
+            }
+            else
+            {
+                read = await rest.ReadAsync(buffer, cancellationToken);
+            }
+
+            return Count(read);
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+            ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            int read;
+            if (!_header.IsEmpty)
+            {
+                read = Math.Min(count, _header.Length);
+                _header.Span[..read].CopyTo(buffer.AsSpan(offset, read));
+                _header = _header[read..];
+            }
+            else
+            {
+                read = rest.Read(buffer, offset, count);
+            }
+
+            return Count(read);
+        }
+
+        private int Count(int read)
+        {
+            BytesRead += read;
+            if (BytesRead > maxBytes)
+                throw new FileTooLargeException();
+            return read;
+        }
+
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     private static Dictionary<string, string[]> FileError(string message) => new() { ["file"] = [message] };

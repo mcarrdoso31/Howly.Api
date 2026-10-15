@@ -2,7 +2,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BZ.Howly.Api.Core\BZ.Howly.Api.Core.csproj" />
-    <ProjectReference Include="..\BZ.Howly.Api.DAO\BZ.Howly.Api.DAO.csproj" />
     <ProjectReference Include="..\BZ.Howly.Api.Utils\BZ.Howly.Api.Utils.csproj" />
   </ItemGroup>
 

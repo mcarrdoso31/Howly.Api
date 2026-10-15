@@ -23,6 +23,9 @@ public interface IProcessRepository
     /// <summary>In-progress or paused processes under <paramref name="assigneeId"/>, ready to be changed.</summary>
     Task<IReadOnlyList<Process>> ListOpenAssignedToAsync(Guid assigneeId, CancellationToken cancellationToken = default);
 
+    /// <summary>How many in-progress or paused processes are under <paramref name="assigneeId"/>, without loading them.</summary>
+    Task<int> CountOpenAssignedToAsync(Guid assigneeId, CancellationToken cancellationToken = default);
+
     /// <summary>The home page counts (of <paramref name="assigneeId"/>'s processes when given), in one query.</summary>
     Task<ProcessSummaryResponse> SummarizeAsync(Guid? assigneeId, DateTimeOffset now, DateOnly today, CancellationToken cancellationToken = default);
 

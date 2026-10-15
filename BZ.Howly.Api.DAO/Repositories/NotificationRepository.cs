@@ -18,6 +18,7 @@ public sealed class NotificationRepository(HowlyDbContext context) : INotificati
         var items = await query
             .OrderByDescending(n => n.CreatedAt)
             .ThenByDescending(n => n.EventSequence)
+            .ThenByDescending(n => n.Id)
             .Skip(skip)
             .Take(take)
             .ToListAsync(cancellationToken);
@@ -30,8 +31,10 @@ public sealed class NotificationRepository(HowlyDbContext context) : INotificati
     public Task<Notification?> FindAsync(Guid userId, Guid id, CancellationToken cancellationToken = default) =>
         context.Notifications.SingleOrDefaultAsync(n => n.Id == id && n.UserId == userId, cancellationToken);
 
-    public async Task<IReadOnlyList<Notification>> ListUnreadAsync(Guid userId, CancellationToken cancellationToken = default) =>
-        await context.Notifications.Where(n => n.UserId == userId && n.ReadAt == null).ToListAsync(cancellationToken);
+    // One UPDATE, inside the tenant (the query filter applies to bulk updates too).
+    public Task MarkAllReadAsync(Guid userId, DateTimeOffset now, CancellationToken cancellationToken = default) =>
+        context.Notifications.Where(n => n.UserId == userId && n.ReadAt == null)
+            .ExecuteUpdateAsync(set => set.SetProperty(n => n.ReadAt, now), cancellationToken);
 
     public async Task<IReadOnlyDictionary<Guid, DateTimeOffset>> ReadAtByEventAsync(Guid processId, Guid userId, CancellationToken cancellationToken = default) =>
         await context.Notifications

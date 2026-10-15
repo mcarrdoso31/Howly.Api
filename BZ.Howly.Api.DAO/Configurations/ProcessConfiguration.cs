@@ -34,7 +34,9 @@ public sealed class ProcessConfiguration : IEntityTypeConfiguration<Process>
         const string tenant = HowlyDbContext.TenantIdProperty;
         builder.HasIndex(tenant, nameof(Process.UpdatedAt));
         builder.HasIndex(tenant, nameof(Process.CustomerId), nameof(Process.UpdatedAt));
-        builder.HasIndex(tenant, nameof(Process.AssigneeId));
+        // "Mine" and the status filter, both newest first (the assignee one also serves the old (tenant, assignee) lookups).
+        builder.HasIndex(tenant, nameof(Process.AssigneeId), nameof(Process.UpdatedAt));
+        builder.HasIndex(tenant, nameof(Process.Status), nameof(Process.UpdatedAt));
         builder.HasIndex(tenant, nameof(Process.ParentId));
         builder.HasIndex(tenant, nameof(Process.Status), nameof(Process.WaitingOn));
         builder.HasIndex(tenant, nameof(Process.Status), nameof(Process.ActiveStepDueAt));

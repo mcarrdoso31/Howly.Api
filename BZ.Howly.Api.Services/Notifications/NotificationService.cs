@@ -53,11 +53,6 @@ public sealed class NotificationService(
         return true;
     }
 
-    public async Task MarkAllReadAsync(Guid userId, CancellationToken cancellationToken = default)
-    {
-        var now = timeProvider.GetUtcNow();
-        foreach (var notification in await notificationRepository.ListUnreadAsync(userId, cancellationToken))
-            notification.MarkRead(now);
-        await notificationRepository.SaveChangesAsync(cancellationToken);
-    }
+    public Task MarkAllReadAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        notificationRepository.MarkAllReadAsync(userId, timeProvider.GetUtcNow(), cancellationToken);
 }

@@ -50,6 +50,7 @@ public sealed class CustomerRepository(HowlyDbContext context) : ICustomerReposi
         var total = await query.CountAsync(cancellationToken);
         var items = await query
             .OrderBy(x => x.customer.CompanyName)
+            .ThenBy(x => x.customer.Id)
             .Skip(skip)
             .Take(take)
             .Select(x => new CustomerListItem(

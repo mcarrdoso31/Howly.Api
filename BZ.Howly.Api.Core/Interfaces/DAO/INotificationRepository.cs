@@ -15,7 +15,8 @@ public interface INotificationRepository
     /// <summary>Null when it does not exist or belongs to someone else.</summary>
     Task<Notification?> FindAsync(Guid userId, Guid id, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<Notification>> ListUnreadAsync(Guid userId, CancellationToken cancellationToken = default);
+    /// <summary>Marks every unread notification of <paramref name="userId"/> as read, in one statement (it saves by itself).</summary>
+    Task MarkAllReadAsync(Guid userId, DateTimeOffset now, CancellationToken cancellationToken = default);
 
     /// <summary>When <paramref name="userId"/> read the notification of each event of the process (read ones only).</summary>
     Task<IReadOnlyDictionary<Guid, DateTimeOffset>> ReadAtByEventAsync(Guid processId, Guid userId, CancellationToken cancellationToken = default);

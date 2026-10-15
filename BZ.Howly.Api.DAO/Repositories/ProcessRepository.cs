@@ -29,6 +29,10 @@ public sealed class ProcessRepository(HowlyDbContext context) : IProcessReposito
             .Where(p => p.AssigneeId == assigneeId && (p.Status == ProcessStatus.InProgress || p.Status == ProcessStatus.Paused))
             .ToListAsync(cancellationToken);
 
+    public Task<int> CountOpenAssignedToAsync(Guid assigneeId, CancellationToken cancellationToken = default) =>
+        context.Processes.CountAsync(
+            p => p.AssigneeId == assigneeId && (p.Status == ProcessStatus.InProgress || p.Status == ProcessStatus.Paused), cancellationToken);
+
     public async Task<ProcessSummaryResponse> SummarizeAsync(Guid? assigneeId, DateTimeOffset now, DateOnly today, CancellationToken cancellationToken = default)
     {
         // Completed and cancelled processes are history. In progress ones wait on someone (paused ones wait on nobody,
@@ -85,12 +89,13 @@ public sealed class ProcessRepository(HowlyDbContext context) : IProcessReposito
             rows = rows.Where(x => x.process.ParentId == parentId);
         if (query.Status is { } status)
             rows = rows.Where(x => x.process.Status == status);
+        // Only in-progress processes wait on someone or have a step deadline: saying so lets the (status, …) indexes serve.
         if (query.WaitingOn is { } waitingOn)
-            rows = rows.Where(x => x.process.WaitingOn == waitingOn);
+            rows = rows.Where(x => x.process.Status == ProcessStatus.InProgress && x.process.WaitingOn == waitingOn);
         if (query.AssigneeId is { } assigneeId)
             rows = rows.Where(x => x.process.AssigneeId == assigneeId);
         if (query.Overdue)
-            rows = rows.Where(x => x.process.ActiveStepDueAt != null && x.process.ActiveStepDueAt < now);
+            rows = rows.Where(x => x.process.Status == ProcessStatus.InProgress && x.process.ActiveStepDueAt != null && x.process.ActiveStepDueAt < now);
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             // ToUpper on both sides keeps the search case-insensitive on SQL Server, SQLite and PostgreSQL alike.
@@ -105,6 +110,8 @@ public sealed class ProcessRepository(HowlyDbContext context) : IProcessReposito
         var total = await rows.CountAsync(cancellationToken);
         var page = await rows
             .OrderByDescending(x => x.process.UpdatedAt)
+            // Many processes change at the same instant (the overdue job marks them all at once): the id keeps pages apart.
+            .ThenByDescending(x => x.process.Id)
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
             .Select(x => new

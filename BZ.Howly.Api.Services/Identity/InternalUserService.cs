@@ -172,7 +172,7 @@ public sealed partial class InternalUserService(
 
     private async Task<InternalUserResponse> ToResponseAsync(UserAccount user, CancellationToken cancellationToken) =>
         new(user.Id, user.Username, user.DisplayName, user.Roles, user.MustChangePassword, user.IsActive,
-            (await processRepository.ListOpenAssignedToAsync(user.Id, cancellationToken)).Count);
+            await processRepository.CountOpenAssignedToAsync(user.Id, cancellationToken));
 
     public async Task<OperationResult<TemporaryPasswordResponse>> ResetPasswordAsync(
         Guid id, Guid requestedBy, CancellationToken cancellationToken = default)

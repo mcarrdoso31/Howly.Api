@@ -435,17 +435,19 @@ namespace BZ.Howly.Api.DAO.Migrations
 
                     b.HasIndex("RenewalProcessId");
 
-                    b.HasIndex("TenantId", "AssigneeId");
-
                     b.HasIndex("TenantId", "ParentId");
 
                     b.HasIndex("TenantId", "RenewalStartsOn");
 
                     b.HasIndex("TenantId", "UpdatedAt");
 
+                    b.HasIndex("TenantId", "AssigneeId", "UpdatedAt");
+
                     b.HasIndex("TenantId", "CustomerId", "UpdatedAt");
 
                     b.HasIndex("TenantId", "Status", "ActiveStepDueAt");
+
+                    b.HasIndex("TenantId", "Status", "UpdatedAt");
 
                     b.HasIndex("TenantId", "Status", "WaitingOn");
 
