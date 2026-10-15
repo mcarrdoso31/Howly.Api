@@ -98,8 +98,7 @@ public sealed class ProcessStep
     public string? AgencyName { get; private set; }
     public int? DurationDays { get; private set; }
     public bool IsOptional { get; private set; }
-    public string? CustomerChecklist { get; private set; }
-    public string? DeliveryChecklist { get; private set; }
+    public string? Notes { get; private set; }
     public StepStatus Status { get; private set; }
     public DateTimeOffset? StartedAt { get; private set; }
     public DateTimeOffset? FinishedAt { get; private set; }
@@ -125,8 +124,7 @@ public sealed class ProcessStep
         AgencyName = template.AgencyName,
         DurationDays = template.DurationDays,
         IsOptional = template.IsOptional,
-        CustomerChecklist = template.CustomerChecklist,
-        DeliveryChecklist = template.DeliveryChecklist,
+        Notes = template.Notes,
         Status = StepStatus.Pending,
     };
 

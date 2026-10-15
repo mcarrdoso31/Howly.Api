@@ -11,7 +11,7 @@ public sealed record ProcessTypeResponse(
     public static ProcessTypeResponse From(ProcessType type) => new(
         type.Id, type.Name, type.Description, type.IsActive,
         type.Steps.Select(s => new StepTemplateResponse(
-            s.Id, s.Name, s.Description, s.Owner, s.AgencyName, s.DurationDays, s.IsOptional, s.CustomerChecklist, s.DeliveryChecklist,
+            s.Id, s.Name, s.Description, s.Owner, s.AgencyName, s.DurationDays, s.IsOptional, s.Notes,
             s.Documents, s.Deliverables, s.AgencyId)).ToList(),
         type.CreatedAt, type.UpdatedAt);
 }
@@ -24,8 +24,7 @@ public sealed record StepTemplateResponse(
     string? AgencyName,
     int? DurationDays,
     bool IsOptional,
-    string? CustomerChecklist,
-    string? DeliveryChecklist,
+    string? Notes,
     IReadOnlyList<DocumentRequirement> Documents,
     IReadOnlyList<string> Deliverables,
     Guid? AgencyId);

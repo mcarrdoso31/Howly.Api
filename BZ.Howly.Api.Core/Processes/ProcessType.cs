@@ -10,7 +10,7 @@ public sealed class ProcessType
 {
     public const int MaxNameLength = 120;
     public const int MaxDescriptionLength = 1000;
-    public const int MaxChecklistLength = 2000;
+    public const int MaxNotesLength = 2000;
     public const int MaxSteps = 30;
     public const int MaxDurationDays = 365;
     public const int MaxDocumentsPerStep = 30;
@@ -61,10 +61,8 @@ public sealed class ProcessType
                 errors[$"{prefix}.agencyName"] = [$"Agency name must have at most {MaxNameLength} characters."];
             if (step.DurationDays is < 1 or > MaxDurationDays)
                 errors[$"{prefix}.durationDays"] = [$"Duration must be between 1 and {MaxDurationDays} days."];
-            if (step.CustomerChecklist?.Trim().Length > MaxChecklistLength)
-                errors[$"{prefix}.customerChecklist"] = [$"Checklist must have at most {MaxChecklistLength} characters."];
-            if (step.DeliveryChecklist?.Trim().Length > MaxChecklistLength)
-                errors[$"{prefix}.deliveryChecklist"] = [$"Checklist must have at most {MaxChecklistLength} characters."];
+            if (step.Notes?.Trim().Length > MaxNotesLength)
+                errors[$"{prefix}.notes"] = [$"Notes must have at most {MaxNotesLength} characters."];
 
             ValidateNames(errors, $"{prefix}.documents", (step.Documents ?? []).Select(d => d?.Name).ToList());
             ValidateNames(errors, $"{prefix}.deliverables", step.Deliverables ?? []);
@@ -97,7 +95,10 @@ public sealed class ProcessType
         return type;
     }
 
-    /// <summary>Replaces the name, description and the whole step list.</summary>
+    /// <summary>
+    /// Replaces the name, description and the whole step list. Steps given with the id of one of this type's steps keep
+    /// that identity (edited in place); the others are new, and the steps left out are removed.
+    /// </summary>
     public void Update(string name, string? description, IReadOnlyList<StepTemplateDetails> steps, DateTimeOffset now)
     {
         var errors = Validate(name, description, steps);
@@ -106,8 +107,24 @@ public sealed class ProcessType
 
         Name = name.Trim();
         Description = ProcessText.Blank(description);
+        var current = _steps.ToDictionary(s => s.Id);
+        var kept = new List<StepTemplate>();
+        for (var position = 0; position < steps.Count; position++)
+        {
+            // An id repeated in the request keeps its identity only once.
+            if (steps[position].Id is { } id && current.Remove(id, out var existing))
+            {
+                existing.Apply(steps[position], position);
+                kept.Add(existing);
+            }
+            else
+            {
+                kept.Add(StepTemplate.FromValidated(steps[position], position));
+            }
+        }
+
         _steps.Clear();
-        _steps.AddRange(steps.Select((step, position) => StepTemplate.FromValidated(step, position)));
+        _steps.AddRange(kept);
         UpdatedAt = now;
     }
 

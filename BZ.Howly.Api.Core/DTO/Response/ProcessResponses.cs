@@ -94,8 +94,7 @@ public sealed record ProcessStepResponse(
     string? AgencyName,
     int? DurationDays,
     bool IsOptional,
-    string? CustomerChecklist,
-    string? DeliveryChecklist,
+    string? Notes,
     StepStatus Status,
     DateTimeOffset? StartedAt,
     DateTimeOffset? FinishedAt,
@@ -103,7 +102,7 @@ public sealed record ProcessStepResponse(
     Guid? AgencyId)
 {
     public static ProcessStepResponse From(ProcessStep s) => new(
-        s.Id, s.Name, s.Description, s.Owner, s.AgencyName, s.DurationDays, s.IsOptional, s.CustomerChecklist, s.DeliveryChecklist,
+        s.Id, s.Name, s.Description, s.Owner, s.AgencyName, s.DurationDays, s.IsOptional, s.Notes,
         s.Status, s.StartedAt, s.FinishedAt, s.DueAt, s.AgencyId);
 }
 

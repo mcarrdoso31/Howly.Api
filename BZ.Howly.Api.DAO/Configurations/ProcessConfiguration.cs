@@ -56,8 +56,7 @@ public sealed class ProcessConfiguration : IEntityTypeConfiguration<Process>
             step.Property(s => s.Status).HasConversion<string>().HasMaxLength(EnumLength);
             step.Property(s => s.AgencyName).HasMaxLength(ProcessType.MaxNameLength);
             step.HasOne<Agency>().WithMany().HasForeignKey(s => s.AgencyId).OnDelete(DeleteBehavior.Restrict);
-            step.Property(s => s.CustomerChecklist).HasMaxLength(ProcessType.MaxChecklistLength);
-            step.Property(s => s.DeliveryChecklist).HasMaxLength(ProcessType.MaxChecklistLength);
+            step.Property(s => s.Notes).HasMaxLength(ProcessType.MaxNotesLength);
             step.Ignore(s => s.DueAt);
             step.Property(s => s.OverdueNotifiedAt);
             // As ticks: SQL Server's time type stops at 24 hours, and pauses last days.

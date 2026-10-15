@@ -17,7 +17,7 @@ public class ProcessTypeEndpointsTests(HowlyApiFactory factory) : IClassFixture<
     }
 
     private static object Step(string name, string owner = "Customer", string? agencyName = null, int? durationDays = 5, bool isOptional = false) =>
-        new { name, description = (string?)null, owner, agencyName, durationDays, isOptional, customerChecklist = "Procuração", deliveryChecklist = (string?)null };
+        new { name, description = (string?)null, owner, agencyName, durationDays, isOptional, notes = "Procuração" };
 
     private static object MtrBody(string name = "Emissão de MTR") => new
     {
@@ -49,7 +49,8 @@ public class ProcessTypeEndpointsTests(HowlyApiFactory factory) : IClassFixture<
         var steps = created.GetProperty("steps").EnumerateArray().ToList();
         steps.Select(s => s.GetProperty("name").GetString()).Should().Equal("Coleta de documentos", "Protocolo", "Análise do órgão", "Pagamento da guia");
         steps[2].GetProperty("owner").GetString().Should().Be("Agency");
-        steps[2].GetProperty("agencyName").GetString().Should().Be("IBAMA");
+        // A typed agency name is no longer taken: agencies come from the catalog (AgencyEndpointsTests).
+        steps[2].GetProperty("agencyName").ValueKind.Should().Be(JsonValueKind.Null);
         steps[3].GetProperty("isOptional").GetBoolean().Should().BeTrue();
     }
 

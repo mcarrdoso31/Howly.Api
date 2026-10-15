@@ -8,7 +8,7 @@ public class ProcessTypeTests
     private static readonly DateTimeOffset Now = new(2026, 10, 13, 12, 0, 0, TimeSpan.Zero);
 
     public static StepTemplateDetails Step(string name = "Coleta de documentos", StepOwner owner = StepOwner.Customer) =>
-        new(name, null, owner, null, 5, false, "Procuração assinada", null, [], []);
+        new(name, null, owner, null, 5, false, "Procuração assinada", [], []);
 
     private static ProcessType NewType(params StepTemplateDetails[] steps) =>
         ProcessType.Create("Emissão de MTR", "Manifesto de transporte de resíduos", steps.Length > 0 ? steps : [Step()], Now);
@@ -37,13 +37,12 @@ public class ProcessTypeTests
     [Fact]
     public void Blank_texts_become_null_and_names_are_trimmed()
     {
-        var type = NewType(new StepTemplateDetails("  Coleta ", "  ", StepOwner.Customer, null, null, true, " ", "  Protocolo ", [], []));
+        var type = NewType(new StepTemplateDetails("  Coleta ", "  ", StepOwner.Customer, null, null, true, "  Protocolo ", [], []));
 
         var step = type.Steps[0];
         step.Name.Should().Be("Coleta");
         step.Description.Should().BeNull();
-        step.CustomerChecklist.Should().BeNull();
-        step.DeliveryChecklist.Should().Be("Protocolo");
+        step.Notes.Should().Be("Protocolo");
         step.IsOptional.Should().BeTrue();
     }
 
@@ -89,7 +88,7 @@ public class ProcessTypeTests
     [Theory]
     [InlineData("name")]
     [InlineData("durationDays")]
-    [InlineData("customerChecklist")]
+    [InlineData("notes")]
     [InlineData("agencyName")]
     public void Validate_points_to_the_invalid_field_of_the_step(string field)
     {
@@ -97,7 +96,7 @@ public class ProcessTypeTests
         {
             "name" => Step(" "),
             "durationDays" => Step() with { DurationDays = 0 },
-            "customerChecklist" => Step() with { CustomerChecklist = new string('x', ProcessType.MaxChecklistLength + 1) },
+            "notes" => Step() with { Notes = new string('x', ProcessType.MaxNotesLength + 1) },
             _ => Step("Análise", StepOwner.Agency) with { AgencyName = new string('x', ProcessType.MaxNameLength + 1) },
         };
 

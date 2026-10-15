@@ -7,6 +7,8 @@ namespace BZ.Howly.Api.Core.Processes;
 /// <param name="Deliverables">Files the company delivers in this step (protocol, payment slip, license…).</param>
 /// <param name="AgencyName">Agency steps: how the agency shows (the acronym of <paramref name="AgencyId"/> when one is chosen).</param>
 /// <param name="AgencyId">Agency steps: the default agency, from the catalog; each process can change it.</param>
+/// <param name="Notes">Anything else about the step, in the staff's words.</param>
+/// <param name="Id">An existing step of the type being edited: it keeps its identity.</param>
 public sealed record StepTemplateDetails(
     string? Name,
     string? Description,
@@ -14,11 +16,11 @@ public sealed record StepTemplateDetails(
     string? AgencyName,
     int? DurationDays,
     bool IsOptional,
-    string? CustomerChecklist,
-    string? DeliveryChecklist,
+    string? Notes,
     IReadOnlyList<DocumentRequirement>? Documents,
     IReadOnlyList<string>? Deliverables,
-    Guid? AgencyId = null);
+    Guid? AgencyId = null,
+    Guid? Id = null);
 
 /// <summary>A document a step asks for (e.g. "Licença de operação de máquinas agrícolas").</summary>
 /// <param name="ExampleId">A <see cref="DocumentExample"/> for the customer to download and follow.</param>
@@ -49,11 +51,8 @@ public sealed class StepTemplate
     /// <summary>Optional steps can be skipped.</summary>
     public bool IsOptional { get; private set; }
 
-    /// <summary>What the customer must send in this step (free text until documents arrive in P2).</summary>
-    public string? CustomerChecklist { get; private set; }
-
-    /// <summary>What the company delivers in this step (protocol, payment slip, license…).</summary>
-    public string? DeliveryChecklist { get; private set; }
+    /// <summary>Anything else about the step, in the staff's words.</summary>
+    public string? Notes { get; private set; }
 
     /// <summary>Documents the customer sends in this step; each becomes a field of the process when it is opened.</summary>
     public IReadOnlyList<DocumentRequirement> Documents { get; private set; } = [];
@@ -64,22 +63,28 @@ public sealed class StepTemplate
     private StepTemplate() { }
 
     /// <summary>Builds a step from data already checked by <see cref="ProcessType.Validate"/>.</summary>
-    internal static StepTemplate FromValidated(StepTemplateDetails details, int position) => new()
+    internal static StepTemplate FromValidated(StepTemplateDetails details, int position)
     {
-        Id = Ids.New(),
-        Position = position,
-        Name = details.Name!.Trim(),
-        Description = ProcessText.Blank(details.Description),
-        Owner = details.Owner!.Value,
-        AgencyName = details.Owner == StepOwner.Agency ? ProcessText.Blank(details.AgencyName) : null,
-        AgencyId = details.Owner == StepOwner.Agency ? details.AgencyId : null,
-        DurationDays = details.DurationDays,
-        IsOptional = details.IsOptional,
-        CustomerChecklist = ProcessText.Blank(details.CustomerChecklist),
-        DeliveryChecklist = ProcessText.Blank(details.DeliveryChecklist),
-        Documents = (details.Documents ?? []).Select(d => new DocumentRequirement(d.Name!.Trim(), d.IsRequired, d.ExampleId, d.ExampleId is null ? null : d.ExampleFileName)).ToList(),
-        Deliverables = (details.Deliverables ?? []).Select(d => d.Trim()).ToList(),
-    };
+        var step = new StepTemplate { Id = Ids.New() };
+        step.Apply(details, position);
+        return step;
+    }
+
+    /// <summary>Replaces everything but the identity, from data already checked by <see cref="ProcessType.Validate"/>.</summary>
+    internal void Apply(StepTemplateDetails details, int position)
+    {
+        Position = position;
+        Name = details.Name!.Trim();
+        Description = ProcessText.Blank(details.Description);
+        Owner = details.Owner!.Value;
+        AgencyName = details.Owner == StepOwner.Agency ? ProcessText.Blank(details.AgencyName) : null;
+        AgencyId = details.Owner == StepOwner.Agency ? details.AgencyId : null;
+        DurationDays = details.DurationDays;
+        IsOptional = details.IsOptional;
+        Notes = ProcessText.Blank(details.Notes);
+        Documents = (details.Documents ?? []).Select(d => new DocumentRequirement(d.Name!.Trim(), d.IsRequired, d.ExampleId, d.ExampleId is null ? null : d.ExampleFileName)).ToList();
+        Deliverables = (details.Deliverables ?? []).Select(d => d.Trim()).ToList();
+    }
 }
 
 internal static class ProcessText

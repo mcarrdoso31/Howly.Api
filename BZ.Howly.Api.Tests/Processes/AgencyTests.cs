@@ -65,8 +65,8 @@ public class AgencyTests
 
     private static Process Open(Guid? defaultAgency = null) => Process.Open(Guid.NewGuid(), ProcessType.Create("LO", null,
     [
-        new("Protocolo", null, StepOwner.Staff, null, 3, false, null, null, [], []),
-        new("Análise", null, StepOwner.Agency, "CETESB", 30, false, null, null, [], [], defaultAgency),
+        new("Protocolo", null, StepOwner.Staff, null, 3, false, null, [], []),
+        new("Análise", null, StepOwner.Agency, "CETESB", 30, false, null, [], [], defaultAgency),
     ], Now), "LO", Jane.Id, null, Jane, Now);
 
     [Fact]
@@ -82,7 +82,7 @@ public class AgencyTests
 
     [Fact]
     public void Agency_steps_need_no_agency_up_front() =>
-        ProcessType.Validate("LO", null, [new("Análise", null, StepOwner.Agency, null, 30, false, null, null, [], [])]).Should().BeEmpty();
+        ProcessType.Validate("LO", null, [new("Análise", null, StepOwner.Agency, null, 30, false, null, [], [])]).Should().BeEmpty();
 
     [Fact]
     public void The_staff_change_the_agency_of_a_step_not_finished_yet()

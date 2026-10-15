@@ -1087,14 +1087,6 @@ namespace BZ.Howly.Api.DAO.Migrations
                                 .HasMaxLength(120)
                                 .HasColumnType("nvarchar(120)");
 
-                            b1.Property<string>("CustomerChecklist")
-                                .HasMaxLength(2000)
-                                .HasColumnType("nvarchar(2000)");
-
-                            b1.Property<string>("DeliveryChecklist")
-                                .HasMaxLength(2000)
-                                .HasColumnType("nvarchar(2000)");
-
                             b1.Property<string>("Description")
                                 .HasMaxLength(1000)
                                 .HasColumnType("nvarchar(1000)");
@@ -1112,6 +1104,10 @@ namespace BZ.Howly.Api.DAO.Migrations
                                 .IsRequired()
                                 .HasMaxLength(120)
                                 .HasColumnType("nvarchar(120)");
+
+                            b1.Property<string>("Notes")
+                                .HasMaxLength(2000)
+                                .HasColumnType("nvarchar(2000)");
 
                             b1.Property<DateTimeOffset?>("OverdueNotifiedAt")
                                 .HasColumnType("datetimeoffset");
@@ -1265,17 +1261,9 @@ namespace BZ.Howly.Api.DAO.Migrations
                                 .HasMaxLength(120)
                                 .HasColumnType("nvarchar(120)");
 
-                            b1.Property<string>("CustomerChecklist")
-                                .HasMaxLength(2000)
-                                .HasColumnType("nvarchar(2000)");
-
                             b1.Property<string>("Deliverables")
                                 .IsRequired()
                                 .HasColumnType("nvarchar(max)");
-
-                            b1.Property<string>("DeliveryChecklist")
-                                .HasMaxLength(2000)
-                                .HasColumnType("nvarchar(2000)");
 
                             b1.Property<string>("Description")
                                 .HasMaxLength(1000)
@@ -1295,6 +1283,10 @@ namespace BZ.Howly.Api.DAO.Migrations
                                 .IsRequired()
                                 .HasMaxLength(120)
                                 .HasColumnType("nvarchar(120)");
+
+                            b1.Property<string>("Notes")
+                                .HasMaxLength(2000)
+                                .HasColumnType("nvarchar(2000)");
 
                             b1.Property<string>("Owner")
                                 .IsRequired()

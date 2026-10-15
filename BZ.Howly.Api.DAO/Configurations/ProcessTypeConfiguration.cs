@@ -28,8 +28,7 @@ public sealed class ProcessTypeConfiguration : IEntityTypeConfiguration<ProcessT
             step.Property(s => s.Owner).HasConversion<string>().HasMaxLength(20);
             step.Property(s => s.AgencyName).HasMaxLength(ProcessType.MaxNameLength);
             step.HasOne<Agency>().WithMany().HasForeignKey(s => s.AgencyId).OnDelete(DeleteBehavior.Restrict);
-            step.Property(s => s.CustomerChecklist).HasMaxLength(ProcessType.MaxChecklistLength);
-            step.Property(s => s.DeliveryChecklist).HasMaxLength(ProcessType.MaxChecklistLength);
+            step.Property(s => s.Notes).HasMaxLength(ProcessType.MaxNotesLength);
             // Small lists that always travel with the step: stored as JSON text on the step row.
             step.Property(s => s.Documents).HasConversion(Json.Converter<IReadOnlyList<DocumentRequirement>>(), Json.Comparer<DocumentRequirement>());
             step.Property(s => s.Deliverables).HasConversion(Json.Converter<IReadOnlyList<string>>(), Json.Comparer<string>());

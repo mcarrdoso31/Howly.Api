@@ -7,7 +7,7 @@ namespace BZ.Howly.Api.Tests.Processes;
 public class ProcessTypeRulesTests
 {
     private static StepTemplateDetails Step(string? name = "Coleta", StepOwner? owner = StepOwner.Customer, string? agencyName = null) =>
-        new(name, null, owner, agencyName, 5, false, null, null, [], []);
+        new(name, null, owner, agencyName, 5, false, null, [], []);
 
     [Fact]
     public void A_missing_owner_is_an_error_instead_of_the_customer() =>
@@ -31,7 +31,7 @@ public class ProcessTypeRulesTests
         var request = new ProcessTypeRequest("MTR", null,
         [
             null!,
-            new StepTemplateRequest("Coleta", null, StepOwner.Customer, null, 5, false, null, null, [null!], [null!]),
+            new StepTemplateRequest("Coleta", null, StepOwner.Customer, 5, false, null, [null!], [null!]),
         ]);
 
         var errors = ProcessType.Validate(request.Name, request.Description, request.StepDetails());

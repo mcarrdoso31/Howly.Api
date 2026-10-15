@@ -14,8 +14,8 @@ public class NotificationTests
     {
         var type = ProcessType.Create("Emissão de MTR", null,
         [
-            new("Coleta", null, StepOwner.Customer, null, 5, false, null, null, [], []),
-            new("Análise", null, StepOwner.Agency, "IBAMA", 30, false, null, null, [], []),
+            new("Coleta", null, StepOwner.Customer, null, 5, false, null, [], []),
+            new("Análise", null, StepOwner.Agency, "IBAMA", 30, false, null, [], []),
         ], Now);
         return Process.Open(Guid.NewGuid(), type, "MTR — Jundiaí", Jane.Id, null, Jane, Now);
     }

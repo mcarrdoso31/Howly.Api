@@ -54,7 +54,7 @@ public class ProcessEndpointsTests(HowlyApiFactory factory) : IClassFixture<Howl
     }
 
     private static object Step(string name, string owner, int? durationDays = 5, bool isOptional = false, string? agencyName = null) =>
-        new { name, owner, agencyName, durationDays, isOptional, customerChecklist = owner == "Customer" ? "Procuração" : null };
+        new { name, owner, agencyName, durationDays, isOptional, notes = owner == "Customer" ? "Procuração" : null };
 
     private async Task<Guid> TypeAsync(string token, bool active = true)
     {
@@ -107,7 +107,8 @@ public class ProcessEndpointsTests(HowlyApiFactory factory) : IClassFixture<Howl
         process.GetProperty("assignee").GetProperty("id").GetGuid().Should().Be(staffId);
         process.GetProperty("assignee").GetProperty("name").GetString().Should().Be("Jane Analyst");
         StepStatuses(process).Should().Equal("Active", "Pending", "Pending", "Pending");
-        process.GetProperty("steps")[3].GetProperty("agencyName").GetString().Should().Be("IBAMA");
+        // A typed agency name is no longer taken: agencies come from the catalog (AgencyEndpointsTests).
+        process.GetProperty("steps")[3].GetProperty("agencyName").ValueKind.Should().Be(JsonValueKind.Null);
         process.GetProperty("events")[0].GetProperty("type").GetString().Should().Be("Opened");
     }
 
@@ -303,7 +304,7 @@ public class ProcessEndpointsTests(HowlyApiFactory factory) : IClassFixture<Howl
         list.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("id").GetGuid()).Should().Equal(mine);
 
         var detail = await (await _client.SendAsync(HttpMethod.Get, $"/api/me/processes/{mine}", customerToken)).JsonAsync();
-        detail.GetProperty("steps")[0].GetProperty("customerChecklist").GetString().Should().Be("Procuração");
+        detail.GetProperty("steps")[0].GetProperty("notes").GetString().Should().Be("Procuração");
         detail.GetProperty("events").EnumerateArray().Last().GetProperty("comment").GetString().Should().Be("Recebemos a procuração");
 
         (await _client.SendAsync(HttpMethod.Get, $"/api/me/processes/{theirs}", customerToken)).StatusCode.Should().Be(HttpStatusCode.NotFound);

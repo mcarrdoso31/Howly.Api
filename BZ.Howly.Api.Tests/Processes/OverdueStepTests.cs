@@ -11,9 +11,9 @@ public class OverdueStepTests
     /// <summary>Customer step of 5 days, then a staff step of 3 days, then a step without deadline.</summary>
     private static Process Open() => Process.Open(Guid.NewGuid(), ProcessType.Create("Emissão de MTR", null,
     [
-        new("Coleta de documentos", null, StepOwner.Customer, null, 5, false, null, null, [], []),
-        new("Protocolo", null, StepOwner.Staff, null, 3, false, null, null, [], []),
-        new("Análise", null, StepOwner.Agency, "IBAMA", null, false, null, null, [], []),
+        new("Coleta de documentos", null, StepOwner.Customer, null, 5, false, null, [], []),
+        new("Protocolo", null, StepOwner.Staff, null, 3, false, null, [], []),
+        new("Análise", null, StepOwner.Agency, "IBAMA", null, false, null, [], []),
     ], Now), "MTR — Jundiaí", Jane.Id, null, Jane, Now);
 
     [Fact]

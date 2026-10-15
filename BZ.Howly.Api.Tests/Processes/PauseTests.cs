@@ -12,7 +12,7 @@ public class PauseTests
 
     private static Process Open() => Process.Open(Guid.NewGuid(), ProcessType.Create("LO", null,
     [
-        new("Análise", null, StepOwner.Agency, "IAT", 90, false, null, null, [], []),
+        new("Análise", null, StepOwner.Agency, "IAT", 90, false, null, [], []),
     ], Now), "LO — Curitiba", Jane.Id, null, Jane, Now);
 
     private static PauseDetails WaitingOnIat(DateOnly? expectedReturn = null) =>

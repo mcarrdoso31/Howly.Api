@@ -16,9 +16,9 @@ public class ProcessRulesTests
     /// <summary>Customer step (5 days), then staff step (3 days), then an optional customer step.</summary>
     private static ProcessType Type() => ProcessType.Create("Emissão de MTR", null,
     [
-        new("Coleta de documentos", null, StepOwner.Customer, null, 5, false, null, null, [], []),
-        new("Protocolo", null, StepOwner.Staff, null, 3, false, null, null, [], []),
-        new("Complemento", null, StepOwner.Customer, null, null, true, null, null, [], []),
+        new("Coleta de documentos", null, StepOwner.Customer, null, 5, false, null, [], []),
+        new("Protocolo", null, StepOwner.Staff, null, 3, false, null, [], []),
+        new("Complemento", null, StepOwner.Customer, null, null, true, null, [], []),
     ], Now);
 
     private static Process Open(Process? parent = null, Guid? customerId = null) =>

@@ -12,10 +12,10 @@ public class ProcessTests
 
     private static ProcessType Mtr() => ProcessType.Create("Emissão de MTR", null,
     [
-        new("Coleta de documentos", null, StepOwner.Customer, null, 5, false, "Procuração", null, [], []),
-        new("Protocolo", null, StepOwner.Staff, null, 3, false, null, "Protocolo", [], []),
-        new("Pagamento da guia", null, StepOwner.Payment, null, null, true, null, "Guia", [], []),
-        new("Análise", null, StepOwner.Agency, "IBAMA", 30, false, null, "Licença", [], []),
+        new("Coleta de documentos", null, StepOwner.Customer, null, 5, false, "Procuração", [], []),
+        new("Protocolo", null, StepOwner.Staff, null, 3, false, "Protocolo", [], []),
+        new("Pagamento da guia", null, StepOwner.Payment, null, null, true, "Guia", [], []),
+        new("Análise", null, StepOwner.Agency, "IBAMA", 30, false, "Licença", [], []),
     ], Now);
 
     private static Process Open(DateTimeOffset? at = null) => Process.Open(CustomerId, Mtr(), " MTR — Jundiaí ", Jane.Id, null, Jane, at ?? Now);
@@ -36,7 +36,7 @@ public class ProcessTests
         StatusOf(process).Should().Equal("Coleta de documentos:Active", "Protocolo:Pending", "Pagamento da guia:Pending", "Análise:Pending");
         process.Steps[0].StartedAt.Should().Be(Now);
         process.Steps[3].AgencyName.Should().Be("IBAMA");
-        process.Steps[0].CustomerChecklist.Should().Be("Procuração");
+        process.Steps[0].Notes.Should().Be("Procuração");
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class ProcessTests
         var type = Mtr();
         var process = Process.Open(CustomerId, type, "MTR", Jane.Id, null, Jane, Now);
 
-        type.Update("Outro", null, [new("Única", null, StepOwner.Staff, null, null, false, null, null, [], [])], Now);
+        type.Update("Outro", null, [new("Única", null, StepOwner.Staff, null, null, false, null, [], [])], Now);
 
         process.Steps.Should().HaveCount(4);
         process.ProcessTypeName.Should().Be("Emissão de MTR");
