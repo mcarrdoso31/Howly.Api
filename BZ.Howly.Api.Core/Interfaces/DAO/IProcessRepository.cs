@@ -10,6 +10,9 @@ public interface IProcessRepository
     /// <summary>With steps and timeline.</summary>
     Task<Process?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
+    /// <summary>Which of <paramref name="ids"/> are processes of the current consultancy.</summary>
+    Task<IReadOnlyList<Guid>> ListExistingIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Most recently changed first. <paramref name="now"/> decides what is overdue; <paramref name="today"/> (local date)
     /// which renewals are due.

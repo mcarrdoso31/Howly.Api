@@ -12,7 +12,7 @@ public sealed class PreferencesService(IUserPreferencesRepository repository, Ti
     public async Task<PreferencesResponse?> GetAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var preferences = await repository.FindAsync(userId, cancellationToken);
-        return preferences is null ? null : ToResponse(preferences);
+        return preferences is { HasAppearance: true } ? ToResponse(preferences) : null;
     }
 
     public async Task<OperationResult<PreferencesResponse>> SaveAsync(

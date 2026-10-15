@@ -14,6 +14,9 @@ public sealed class ProcessRepository(HowlyDbContext context) : IProcessReposito
     public Task<Process?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         context.Processes.SingleOrDefaultAsync(p => p.Id == id, cancellationToken);
 
+    public async Task<IReadOnlyList<Guid>> ListExistingIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default) =>
+        ids.Count == 0 ? [] : await context.Processes.Where(p => ids.Contains(p.Id)).Select(p => p.Id).ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyList<Process>> ListOverdueAsync(DateTimeOffset now, CancellationToken cancellationToken = default) =>
         await context.Processes
             .Where(p => p.Status == ProcessStatus.InProgress && p.ActiveStepDueAt != null && p.ActiveStepDueAt < now)

@@ -16,7 +16,8 @@ namespace BZ.Howly.Api.Controllers;
 [Authorize]
 [AllowPendingPasswordChange]
 [AllowPendingProfileConfirmation]
-public sealed class MeController(IPreferencesService preferencesService, IAccountProfileService accountProfileService) : ControllerBase
+public sealed class MeController(
+    IPreferencesService preferencesService, IAccountProfileService accountProfileService, IPinnedProcessesService pinnedProcessesService) : ControllerBase
 {
     [HttpGet("preferences")]
     [ProducesResponseType<PreferencesResponse>(StatusCodes.Status200OK)]
@@ -64,4 +65,19 @@ public sealed class MeController(IPreferencesService preferencesService, IAccoun
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> SavePreferences(UpdatePreferencesRequest request, CancellationToken cancellationToken) =>
         this.ToActionResult(await preferencesService.SaveAsync(this.CurrentUserId(), request, cancellationToken), Ok);
+
+    /// <summary>Staff only: the processes this person keeps on their home page. Nobody else sees them.</summary>
+    [HttpGet("pinned-processes")]
+    [Authorize(Policy = Policies.Internal)]
+    [ProducesResponseType<PinnedProcessesResponse>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPinnedProcesses(CancellationToken cancellationToken) =>
+        Ok(await pinnedProcessesService.GetAsync(this.CurrentUserId(), cancellationToken));
+
+    /// <summary>Replaces the whole list: up to three processes of the consultancy, each once.</summary>
+    [HttpPut("pinned-processes")]
+    [Authorize(Policy = Policies.Internal)]
+    [ProducesResponseType<PinnedProcessesResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> SavePinnedProcesses(PinnedProcessesRequest request, CancellationToken cancellationToken) =>
+        this.ToActionResult(await pinnedProcessesService.SaveAsync(this.CurrentUserId(), request, cancellationToken), Ok);
 }

@@ -127,6 +127,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<ICustomerProfileService, CustomerProfileService>();
         services.AddScoped<IPreferencesService, PreferencesService>();
+        services.AddScoped<IPinnedProcessesService, PinnedProcessesService>();
         services.AddScoped<IAccountProfileService, AccountProfileService>();
         services.AddScoped<IProcessTypeService, ProcessTypeService>();
         services.AddScoped<IProcessService, ProcessService>();

@@ -181,6 +181,13 @@ namespace BZ.Howly.Api.DAO.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(10)");
 
+                    b.Property<string>("PinnedProcessIds")
+                        .IsRequired()
+                        .HasMaxLength(110)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(110)")
+                        .HasColumnName("PinnedProcesses");
+
                     b.Property<string>("PrimaryColor")
                         .HasMaxLength(7)
                         .IsUnicode(false)
