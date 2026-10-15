@@ -119,6 +119,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IJobLock, DatabaseJobLock>();
         services.AddScoped<IAgencyRepository, AgencyRepository>();
         services.AddScoped<IDocumentExampleRepository, DocumentExampleRepository>();
+        services.AddScoped<IOnboardingRepository, OnboardingRepository>();
         services.AddSingleton<IPasswordGenerator, PasswordGenerator>();
 
         services.AddScoped<IAuthService, AuthService>();
@@ -137,6 +138,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITenantProfileService, TenantProfileService>();
         services.AddScoped<IAgencyService, AgencyService>();
         services.AddScoped<IDocumentExampleService, DocumentExampleService>();
+        services.AddScoped<IOnboardingService, OnboardingService>();
 
         return services;
     }
