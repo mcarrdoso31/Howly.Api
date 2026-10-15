@@ -32,6 +32,8 @@ internal static class FileIntake
             return (null, FileError(check switch
             {
                 UploadCheck.BlockedType or UploadCheck.BlockedContent => "Executables, scripts and web pages are not accepted.",
+                UploadCheck.NotAllowedType => $"Send the document as {UploadPolicy.AllowedFormatNames}.",
+                UploadCheck.ContentMismatch => "The content of the file does not match its extension.",
                 UploadCheck.Empty => "The file is empty.",
                 _ => "The file needs a name with an extension.",
             }));

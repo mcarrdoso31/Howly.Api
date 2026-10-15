@@ -14,12 +14,25 @@ public enum UploadCheck
     MissingName,
 
     Empty,
+
+    /// <summary>Not one of the formats documents may have (<see cref="UploadPolicy.AllowedExtensions"/>).</summary>
+    NotAllowedType,
+
+    /// <summary>The first bytes are not of the format the extension says (e.g. a text file renamed to .pdf).</summary>
+    ContentMismatch,
 }
 
+/// <summary>Whether the first bytes of a file are of a format.</summary>
+public delegate bool HeaderMatcher(ReadOnlySpan<byte> header);
+
+/// <summary>A format documents may have: its extensions (with the dot) and how its content starts.</summary>
+public sealed record UploadFormat(string Name, IReadOnlyList<string> Extensions, HeaderMatcher Matches);
+
 /// <summary>
-/// What may be uploaded as a process document: any ordinary document (PDF, Office, text, XML, images, archives…), never
-/// executables, scripts nor content a browser would run. Files are always downloaded as attachments, so even an accepted
-/// file never runs inside the portal. Malware scanning is a later step.
+/// What may be uploaded as a process document: PDF, DOCX, XLSX, JPG/JPEG, PNG and HEIC/HEIF (phone photos), each checked
+/// by extension and by its first bytes; never anything else. Executables, scripts and web pages keep their own refusal
+/// (and log line). Files are always downloaded as attachments and photos are kept as sent, metadata included (the place
+/// and time of a site visit are proof). Malware scanning is a later step.
 /// </summary>
 public static class UploadPolicy
 {
@@ -27,8 +40,28 @@ public static class UploadPolicy
     public const int MaxFileNameLength = 200;
     private const int MaxExtensionLength = 20;
 
-    /// <summary>Bytes <see cref="Check"/> needs to look at.</summary>
-    public const int HeaderLength = 8;
+    /// <summary>Bytes <see cref="Check"/> needs to look at (a HEIC photo says so in its 9th to 12th bytes).</summary>
+    public const int HeaderLength = 12;
+
+    /// <summary>
+    /// The formats accepted, in one place (one day it may be each consultancy's choice). DOCX and XLSX are ZIP packages;
+    /// HEIC/HEIF start with an ISO "ftyp" box naming an image brand.
+    /// </summary>
+    public static readonly IReadOnlyList<UploadFormat> AllowedFormats =
+    [
+        new("PDF", [".pdf"], header => header.StartsWith("%PDF"u8)),
+        new("DOCX", [".docx"], IsZip),
+        new("XLSX", [".xlsx"], IsZip),
+        new("JPG", [".jpg", ".jpeg"], header => header.StartsWith((ReadOnlySpan<byte>)[0xFF, 0xD8, 0xFF])),
+        new("PNG", [".png"], header => header.StartsWith((ReadOnlySpan<byte>)[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])),
+        new("HEIC", [".heic", ".heif"], IsHeif),
+    ];
+
+    public static IReadOnlyList<string> AllowedExtensions { get; } = AllowedFormats.SelectMany(f => f.Extensions).ToList();
+
+    /// <summary>Image brands of HEIF (HEIC is HEIF with HEVC); video brands (e.g. "mp42") are not photos.</summary>
+    private static readonly byte[][] HeifBrands =
+        ["heic"u8.ToArray(), "heix"u8.ToArray(), "hevc"u8.ToArray(), "hevx"u8.ToArray(), "mif1"u8.ToArray(), "msf1"u8.ToArray(), "heif"u8.ToArray()];
 
     private static readonly HashSet<string> BlockedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -60,10 +93,29 @@ public static class UploadPolicy
             return UploadCheck.Empty;
         if (LooksExecutable(header))
             return UploadCheck.BlockedContent;
-        return UploadCheck.Accepted;
+        var format = AllowedFormats.FirstOrDefault(f => f.Extensions.Contains(extension, StringComparer.OrdinalIgnoreCase));
+        if (format is null)
+            return UploadCheck.NotAllowedType;
+        return format.Matches(header) ? UploadCheck.Accepted : UploadCheck.ContentMismatch;
     }
 
-    /// <summary>Office formats that can carry macros: accepted, but flagged to whoever opens them.</summary>
+    /// <summary>For messages: "PDF, DOCX, XLSX, JPG, PNG, HEIC".</summary>
+    public static string AllowedFormatNames => string.Join(", ", AllowedFormats.Select(f => f.Name));
+
+    private static bool IsZip(ReadOnlySpan<byte> header) => header.StartsWith((ReadOnlySpan<byte>)[0x50, 0x4B, 0x03, 0x04]);
+
+    private static bool IsHeif(ReadOnlySpan<byte> header)
+    {
+        if (header.Length < 12 || !header[4..8].SequenceEqual("ftyp"u8))
+            return false;
+        var brand = header[8..12];
+        foreach (var known in HeifBrands)
+            if (brand.SequenceEqual(known))
+                return true;
+        return false;
+    }
+
+    /// <summary>Office formats that can carry macros (accepted before the formats were limited): flagged to whoever opens them.</summary>
     public static bool MayContainMacros(string? fileName) => MacroExtensions.Contains(Path.GetExtension(CleanFileName(fileName)));
 
     /// <summary>The name kept for downloads: no folders, trimmed, at most <see cref="MaxFileNameLength"/> characters (extension kept).</summary>

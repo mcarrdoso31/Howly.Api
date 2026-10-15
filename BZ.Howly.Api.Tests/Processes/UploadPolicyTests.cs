@@ -10,14 +10,8 @@ public class UploadPolicyTests
     private static readonly byte[] ZipHeader = [0x50, 0x4B, 0x03, 0x04, 0x14, 0x00]; // docx, xlsx…
 
     [Theory]
-    [InlineData("procuracao.pdf")]
     [InlineData("planilha de resíduos.xlsx")]
     [InlineData("contrato.docx")]
-    [InlineData("leiaute.xsd")]
-    [InlineData("nota.xml")]
-    [InlineData("observações.txt")]
-    [InlineData("foto.JPEG")]
-    [InlineData("macro.xlsm")]
     public void Accepts_documents(string fileName)
     {
         UploadPolicy.Check(fileName, ZipHeader).Should().Be(UploadCheck.Accepted);
