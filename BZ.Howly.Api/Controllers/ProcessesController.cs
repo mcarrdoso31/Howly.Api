@@ -28,9 +28,10 @@ public sealed class ProcessesController(IProcessService processService, IProcess
         [FromQuery] Guid? parentId = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] bool renewalDue = false,
         CancellationToken cancellationToken = default) =>
         Ok(await processService.ListAsync(
-            new ProcessListQuery(search, customerId, status, waitingOn, assigneeId, overdue, parentId, page, pageSize), cancellationToken));
+            new ProcessListQuery(search, customerId, status, waitingOn, assigneeId, overdue, parentId, page, pageSize, renewalDue), cancellationToken));
 
     /// <summary>The home page counts: open, late, and who they wait on. <paramref name="mine"/> keeps the caller's own.</summary>
     [HttpGet("summary")]
@@ -67,6 +68,22 @@ public sealed class ProcessesController(IProcessService processService, IProcess
     [HttpPost("{id:guid}/pause")]
     public async Task<IActionResult> Pause(Guid id, PauseProcessRequest request, CancellationToken cancellationToken) =>
         this.ToActionResult(await processService.PauseAsync(id, request, this.CurrentUserId(), cancellationToken), Ok);
+
+    /// <summary>The validity of the license this process obtained and when its renewal should start (both optional).</summary>
+    [HttpPut("{id:guid}/license")]
+    [ProducesResponseType<ProcessResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> SetLicense(Guid id, SetLicenseRequest request, CancellationToken cancellationToken) =>
+        this.ToActionResult(await processService.SetLicenseAsync(id, request, this.CurrentUserId(), cancellationToken), Ok);
+
+    /// <summary>Opens the renewal of the license as a new process (same customer and type) and links it to this one.</summary>
+    [HttpPost("{id:guid}/renewal")]
+    [ProducesResponseType<ProcessResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> OpenRenewal(Guid id, OpenRenewalRequest request, CancellationToken cancellationToken) =>
+        this.ToActionResult(
+            await processService.OpenRenewalAsync(id, request, this.CurrentUserId(), cancellationToken),
+            opened => CreatedAtAction(nameof(Get), new { id = opened.Id }, opened));
 
     [HttpPost("{id:guid}/resume")]
     public async Task<IActionResult> Resume(Guid id, CancellationToken cancellationToken) =>

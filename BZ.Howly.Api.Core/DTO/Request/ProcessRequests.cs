@@ -6,6 +6,12 @@ namespace BZ.Howly.Api.Core.DTO.Request;
 /// <param name="ParentId">Opens a subprocess (e.g. one license of a PGRS) of a process of the same customer.</param>
 public sealed record OpenProcessRequest(Guid CustomerId, Guid ProcessTypeId, string? Title, Guid? AssigneeId, Guid? ParentId);
 
+/// <summary>The license this process obtained: when it expires and when its renewal should start (both optional).</summary>
+public sealed record SetLicenseRequest(DateOnly? ExpiresOn, DateOnly? RenewalStartsOn);
+
+/// <summary>Opens the renewal of the license as a new process (same customer and type); the assignee defaults to the current one.</summary>
+public sealed record OpenRenewalRequest(string? Title, Guid? AssigneeId = null);
+
 /// <summary>Body of advance, skip and comments; the comment is optional except for comments.</summary>
 public sealed record ProcessCommentRequest(string? Comment);
 

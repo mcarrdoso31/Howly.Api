@@ -56,6 +56,18 @@ public sealed class Process
     /// <summary>When the staff were told the expected return arrived (once per pause).</summary>
     public DateTimeOffset? ReturnReminderSentAt { get; private set; }
 
+    /// <summary>The license this process obtained: the day it expires, when told. Each process has its own.</summary>
+    public DateOnly? LicenseExpiresOn { get; private set; }
+
+    /// <summary>The day the renewal of the license should start (consultancy's local date); the staff are told on it.</summary>
+    public DateOnly? RenewalStartsOn { get; private set; }
+
+    /// <summary>When the staff were told that the renewal should start; cleared when that day changes.</summary>
+    public DateTimeOffset? RenewalReminderSentAt { get; private set; }
+
+    /// <summary>The process opened to renew this license.</summary>
+    public Guid? RenewalProcessId { get; private set; }
+
     /// <summary>Changes on every change of the process: saving over a version someone else already changed is refused (409).</summary>
     public Guid Version { get; private set; }
 
@@ -344,6 +356,58 @@ public sealed class Process
         // A new version, but not "updated": a warning from the system does not move the process up the lists.
         Version = Guid.NewGuid();
         return true;
+    }
+
+    /// <summary>
+    /// The validity of the license this process obtained and the day its renewal should start, both optional (a license
+    /// may have no renewal; a renewal may be planned without the expiry at hand). Usually told when the process completes,
+    /// and fixable later. A new renewal start is told again on its day.
+    /// </summary>
+    public void SetLicense(DateOnly? expiresOn, DateOnly? renewalStartsOn, Actor actor, DateTimeOffset now)
+    {
+        if (Status == ProcessStatus.Cancelled)
+            throw new ProcessRuleException("A cancelled process has no license.");
+        if (expiresOn is { } expires && renewalStartsOn is { } starts && starts > expires)
+            throw new ArgumentException("The renewal cannot start after the license expires.", nameof(renewalStartsOn));
+        if (expiresOn == LicenseExpiresOn && renewalStartsOn == RenewalStartsOn)
+            return;
+
+        if (renewalStartsOn != RenewalStartsOn)
+            RenewalReminderSentAt = null;
+        LicenseExpiresOn = expiresOn;
+        RenewalStartsOn = renewalStartsOn;
+        Record(ProcessEventType.LicenseChanged, actor, now, details: expiresOn?.ToString("yyyy-MM-dd"));
+        Touch(now);
+    }
+
+    /// <summary>
+    /// Tells the staff (once) that the renewal of the license should start; they open it. False when there is no renewal
+    /// start, it is not there yet, it was already told, the renewal is open or the process was cancelled.
+    /// </summary>
+    public bool MarkRenewalDue(DateOnly today, DateTimeOffset now)
+    {
+        if (Status == ProcessStatus.Cancelled || RenewalStartsOn is not { } starts || starts > today
+            || RenewalReminderSentAt is not null || RenewalProcessId is not null)
+            return false;
+
+        RenewalReminderSentAt = now;
+        Record(ProcessEventType.RenewalDue, Actor.System, now, details: LicenseExpiresOn?.ToString("yyyy-MM-dd"));
+        // A new version, but not "updated": a reminder from the system does not move the process up the lists.
+        Version = Guid.NewGuid();
+        return true;
+    }
+
+    /// <summary>The renewal of this license was opened as <paramref name="renewalId"/> (its title on the timeline).</summary>
+    public void LinkRenewal(Guid renewalId, string renewalTitle, Actor actor, DateTimeOffset now)
+    {
+        if (Status == ProcessStatus.Cancelled)
+            throw new ProcessRuleException("A cancelled process has no license to renew.");
+        if (RenewalProcessId is not null)
+            throw new ProcessRuleException("The renewal of this license was already opened.");
+
+        RenewalProcessId = renewalId;
+        Record(ProcessEventType.RenewalOpened, actor, now, details: renewalTitle);
+        Touch(now);
     }
 
     /// <summary>Fixes the title in any status; the old one stays on the timeline. Same title: nothing happens.</summary>

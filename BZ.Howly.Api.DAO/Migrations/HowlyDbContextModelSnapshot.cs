@@ -346,6 +346,9 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.Property<DateOnly?>("ExpectedReturnOn")
                         .HasColumnType("date");
 
+                    b.Property<DateOnly?>("LicenseExpiresOn")
+                        .HasColumnType("date");
+
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("uniqueidentifier");
 
@@ -370,6 +373,15 @@ namespace BZ.Howly.Api.DAO.Migrations
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
+
+                    b.Property<Guid?>("RenewalProcessId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("RenewalReminderSentAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateOnly?>("RenewalStartsOn")
+                        .HasColumnType("date");
 
                     b.Property<DateTimeOffset?>("ReturnReminderSentAt")
                         .HasColumnType("datetimeoffset");
@@ -414,9 +426,13 @@ namespace BZ.Howly.Api.DAO.Migrations
 
                     b.HasIndex("ProcessTypeId");
 
+                    b.HasIndex("RenewalProcessId");
+
                     b.HasIndex("TenantId", "AssigneeId");
 
                     b.HasIndex("TenantId", "ParentId");
+
+                    b.HasIndex("TenantId", "RenewalStartsOn");
 
                     b.HasIndex("TenantId", "UpdatedAt");
 
@@ -1017,6 +1033,11 @@ namespace BZ.Howly.Api.DAO.Migrations
                         .HasForeignKey("ProcessTypeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("BZ.Howly.Api.Core.Processes.Process", null)
+                        .WithMany()
+                        .HasForeignKey("RenewalProcessId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("BZ.Howly.Api.Core.Tenancy.Tenant", null)
                         .WithMany()

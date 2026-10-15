@@ -28,7 +28,7 @@ public sealed class ProcessService(
     {
         var page = Math.Max(query.Page, 1);
         var pageSize = Math.Clamp(query.PageSize, 1, MaxPageSize);
-        var (items, total) = await processRepository.SearchAsync(query with { Page = page, PageSize = pageSize }, timeProvider.GetUtcNow(), cancellationToken);
+        var (items, total) = await processRepository.SearchAsync(query with { Page = page, PageSize = pageSize }, timeProvider.GetUtcNow(), Today(), cancellationToken);
         return new PagedResponse<ProcessListItemResponse>(items, page, pageSize, total);
     }
 
@@ -179,6 +179,30 @@ public sealed class ProcessService(
     public Task<OperationResult<ProcessResponse>> ResumeAsync(Guid id, Guid actorId, CancellationToken cancellationToken = default) =>
         ActAsync(id, actorId, "status", (process, actor, now) => process.Resume(actor, now), cancellationToken);
 
+    public Task<OperationResult<ProcessResponse>> SetLicenseAsync(Guid id, SetLicenseRequest request, Guid actorId, CancellationToken cancellationToken = default) =>
+        ActAsync(id, actorId, "renewalStartsOn", (process, actor, now) => process.SetLicense(request.ExpiresOn, request.RenewalStartsOn, actor, now), cancellationToken);
+
+    public async Task<OperationResult<ProcessResponse>> OpenRenewalAsync(Guid id, OpenRenewalRequest request, Guid actorId, CancellationToken cancellationToken = default)
+    {
+        var process = await processRepository.FindByIdAsync(id, cancellationToken);
+        if (process is null)
+            return OperationResult<ProcessResponse>.NotFound();
+        if (process.Status == ProcessStatus.Cancelled || process.RenewalProcessId is not null)
+            return OperationResult<ProcessResponse>.Conflict("The renewal of this license was already opened, or the process was cancelled.");
+
+        // Same customer and type (the type may have changed since: the renewal follows it as it is now).
+        var opened = await OpenAsync(
+            new OpenProcessRequest(process.CustomerId, process.ProcessTypeId, request.Title, request.AssigneeId ?? process.AssigneeId, null), actorId, cancellationToken);
+        if (opened.Status != OperationStatus.Success)
+            return opened;
+
+        var eventsBefore = process.Events.Count;
+        process.LinkRenewal(opened.Value!.Id, opened.Value.Title, await ActorAsync(actorId, cancellationToken), timeProvider.GetUtcNow());
+        await notificationService.NotifyAsync(process, eventsBefore, actorId, cancellationToken);
+        await processRepository.SaveChangesAsync(cancellationToken);
+        return opened;
+    }
+
     public async Task<OperationResult<ProcessResponse>> CancelAsync(Guid id, ProcessReasonRequest request, Guid actorId, CancellationToken cancellationToken = default)
     {
         var openSubprocesses = await processRepository.CountOpenSubprocessesAsync(id, cancellationToken);
@@ -299,7 +323,7 @@ public sealed class ProcessService(
             ? new Dictionary<Guid, DateTimeOffset>()
             : await notificationRepository.ReadAtByEventAsync(process.Id, customer.UserId, cancellationToken);
         var children = process.ParentId is null
-            ? (await processRepository.SearchAsync(new ProcessListQuery(ParentId: process.Id, PageSize: MaxPageSize), timeProvider.GetUtcNow(), cancellationToken)).Items
+            ? (await processRepository.SearchAsync(new ProcessListQuery(ParentId: process.Id, PageSize: MaxPageSize), timeProvider.GetUtcNow(), Today(), cancellationToken)).Items
             : [];
 
         return new ProcessResponse(
@@ -321,6 +345,7 @@ public sealed class ProcessService(
             process.Events.Where(e => !forCustomer || e.IsVisibleToCustomer).Select(e => ProcessEventResponse.From(e, seenByCustomer, customer?.UserId)).ToList(),
             children,
             (await documentRepository.ListByProcessAsync(process.Id, cancellationToken)).Select(ProcessDocumentResponse.From).ToList(),
-            PauseResponse.From(process));
+            PauseResponse.From(process),
+            LicenseResponse.From(process));
     }
 }

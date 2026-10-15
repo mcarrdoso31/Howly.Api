@@ -20,6 +20,12 @@ public interface IProcessService
     Task<OperationResult<ProcessResponse>> ReturnAsync(Guid id, ReturnProcessRequest request, Guid actorId, CancellationToken cancellationToken = default);
     Task<OperationResult<ProcessResponse>> PauseAsync(Guid id, PauseProcessRequest request, Guid actorId, CancellationToken cancellationToken = default);
     Task<OperationResult<ProcessResponse>> ResumeAsync(Guid id, Guid actorId, CancellationToken cancellationToken = default);
+
+    /// <summary>The validity of the license this process obtained and when its renewal should start.</summary>
+    Task<OperationResult<ProcessResponse>> SetLicenseAsync(Guid id, SetLicenseRequest request, Guid actorId, CancellationToken cancellationToken = default);
+
+    /// <summary>Opens the renewal of the license as a new process and links it; answers with the new process.</summary>
+    Task<OperationResult<ProcessResponse>> OpenRenewalAsync(Guid id, OpenRenewalRequest request, Guid actorId, CancellationToken cancellationToken = default);
     Task<OperationResult<ProcessResponse>> CancelAsync(Guid id, ProcessReasonRequest request, Guid actorId, CancellationToken cancellationToken = default);
     Task<OperationResult<ProcessResponse>> AssignAsync(Guid id, AssignProcessRequest request, Guid actorId, CancellationToken cancellationToken = default);
 

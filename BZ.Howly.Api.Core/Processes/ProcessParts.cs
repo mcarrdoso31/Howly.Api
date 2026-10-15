@@ -71,6 +71,15 @@ public enum ProcessEventType
 
     /// <summary>The staff sent an approved document back to review.</summary>
     DocumentReopened,
+
+    /// <summary>The validity of the license or the start of its renewal changed (the expiry, if any, in the details).</summary>
+    LicenseChanged,
+
+    /// <summary>The day to start the renewal of the license arrived: a reminder for the staff.</summary>
+    RenewalDue,
+
+    /// <summary>The renewal of the license was opened as another process (its title in the details).</summary>
+    RenewalOpened,
 }
 
 /// <summary>Who did something on a process; the name is copied so the timeline reads well even if it changes later.</summary>
@@ -189,7 +198,7 @@ public sealed class ProcessEvent
     /// <summary>Everything on the timeline is shared with the customer, except the staff's internal notes.</summary>
     public bool IsVisibleToCustomer => Type switch
     {
-        ProcessEventType.InternalNote or ProcessEventType.PauseReturnDue => false,
+        ProcessEventType.InternalNote or ProcessEventType.PauseReturnDue or ProcessEventType.RenewalDue => false,
         ProcessEventType.StepOverdue => Details == nameof(StepOwner.Customer),
         _ => true,
     };

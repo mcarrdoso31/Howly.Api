@@ -10,9 +10,12 @@ public interface IProcessRepository
     /// <summary>With steps and timeline.</summary>
     Task<Process?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
-    /// <summary>Most recently changed first. <paramref name="now"/> decides what is overdue.</summary>
+    /// <summary>
+    /// Most recently changed first. <paramref name="now"/> decides what is overdue; <paramref name="today"/> (local date)
+    /// which renewals are due.
+    /// </summary>
     Task<(IReadOnlyList<ProcessListItemResponse> Items, int TotalCount)> SearchAsync(
-        ProcessListQuery query, DateTimeOffset now, CancellationToken cancellationToken = default);
+        ProcessListQuery query, DateTimeOffset now, DateOnly today, CancellationToken cancellationToken = default);
 
     /// <summary>In-progress or paused processes under <paramref name="assigneeId"/>, ready to be changed.</summary>
     Task<IReadOnlyList<Process>> ListOpenAssignedToAsync(Guid assigneeId, CancellationToken cancellationToken = default);
@@ -22,6 +25,9 @@ public interface IProcessRepository
 
     /// <summary>Paused processes whose expected return arrived (on <paramref name="today"/>, local date) and were not reminded yet.</summary>
     Task<IReadOnlyList<Process>> ListPausedDueAsync(DateOnly today, CancellationToken cancellationToken = default);
+
+    /// <summary>Processes whose license renewal should start by <paramref name="today"/> (local date), not reminded nor opened yet.</summary>
+    Task<IReadOnlyList<Process>> ListRenewalsDueAsync(DateOnly today, CancellationToken cancellationToken = default);
 
     /// <summary>Subprocesses of <paramref name="parentId"/> still in progress or paused.</summary>
     Task<int> CountOpenSubprocessesAsync(Guid parentId, CancellationToken cancellationToken = default);

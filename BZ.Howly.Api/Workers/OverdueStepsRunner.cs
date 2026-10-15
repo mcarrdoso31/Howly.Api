@@ -5,7 +5,8 @@ using BZ.Howly.Api.Core.Tenancy;
 namespace BZ.Howly.Api.Workers;
 
 /// <summary>
-/// One round of the overdue check (late steps, and paused processes whose expected return arrived), going through every
+/// One round of the overdue check (late steps, paused processes whose expected return arrived and licenses whose renewal
+/// should start), going through every
 /// active consultancy in a scope of its own tenant (one failing does not stop the others). Coordinated across
 /// instances by <see cref="IJobLock"/>: one round at a time and, given the interval, one round per interval however many
 /// instances tick.
@@ -35,6 +36,7 @@ public sealed class OverdueStepsRunner(IServiceScopeFactory scopeFactory, ILogge
                 tenantScope.ServiceProvider.GetRequiredService<ITenantContext>().Set(tenant);
                 await tenantScope.ServiceProvider.GetRequiredService<IOverdueStepService>().NotifyOverdueAsync(now, cancellationToken);
                 await tenantScope.ServiceProvider.GetRequiredService<IPauseReturnService>().NotifyDueAsync(now, cancellationToken);
+                await tenantScope.ServiceProvider.GetRequiredService<IRenewalReminderService>().NotifyDueAsync(now, cancellationToken);
             }
             catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
             {

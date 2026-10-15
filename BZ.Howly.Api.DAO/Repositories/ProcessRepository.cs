@@ -44,8 +44,18 @@ public sealed class ProcessRepository(HowlyDbContext context) : IProcessReposito
                 g.Count(p => p.Status == ProcessStatus.Paused),
                 g.Count(p => p.Status == ProcessStatus.Paused && p.ExpectedReturnOn != null && p.ExpectedReturnOn < today)))
             .SingleOrDefaultAsync(cancellationToken);
-        return counts ?? new ProcessSummaryResponse(0, 0, 0, 0, 0, 0, 0, 0);
+        // Renewals come from any license not cancelled, usually completed processes.
+        var renewalsDue = await RenewalsDue(context.Processes, today)
+            .CountAsync(p => assigneeId == null || p.AssigneeId == assigneeId, cancellationToken);
+        return (counts ?? new ProcessSummaryResponse(0, 0, 0, 0, 0, 0, 0, 0)) with { RenewalsDue = renewalsDue };
     }
+
+    /// <summary>The renewal should have started and nobody opened it yet.</summary>
+    private static IQueryable<Process> RenewalsDue(IQueryable<Process> processes, DateOnly today) =>
+        processes.Where(p => p.Status != ProcessStatus.Cancelled && p.RenewalStartsOn != null && p.RenewalStartsOn <= today && p.RenewalProcessId == null);
+
+    public async Task<IReadOnlyList<Process>> ListRenewalsDueAsync(DateOnly today, CancellationToken cancellationToken = default) =>
+        await RenewalsDue(context.Processes, today).Where(p => p.RenewalReminderSentAt == null).ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<Process>> ListPausedDueAsync(DateOnly today, CancellationToken cancellationToken = default) =>
         await context.Processes
@@ -57,10 +67,11 @@ public sealed class ProcessRepository(HowlyDbContext context) : IProcessReposito
             p => p.ParentId == parentId && (p.Status == ProcessStatus.InProgress || p.Status == ProcessStatus.Paused), cancellationToken);
 
     public async Task<(IReadOnlyList<ProcessListItemResponse> Items, int TotalCount)> SearchAsync(
-        ProcessListQuery query, DateTimeOffset now, CancellationToken cancellationToken = default)
+        ProcessListQuery query, DateTimeOffset now, DateOnly today, CancellationToken cancellationToken = default)
     {
+        var processes = query.RenewalDue ? RenewalsDue(context.Processes, today) : context.Processes;
         var rows =
-            from process in context.Processes
+            from process in processes
             join customer in context.Customers on process.CustomerId equals customer.Id
             join assignee in context.Users on process.AssigneeId equals assignee.Id
             select new { process, customer, assignee };
@@ -115,6 +126,8 @@ public sealed class ProcessRepository(HowlyDbContext context) : IProcessReposito
                 x.process.UpdatedAt,
                 x.process.PauseWaitingOnName,
                 x.process.ExpectedReturnOn,
+                x.process.LicenseExpiresOn,
+                x.process.RenewalStartsOn,
                 // What the customer still has to send in the current step.
                 DocumentsToSend = context.ProcessDocuments.Count(d =>
                     d.ProcessId == x.process.Id && d.StepId == x.process.ActiveStepId && d.Kind == DocumentKind.Requested &&
@@ -126,7 +139,7 @@ public sealed class ProcessRepository(HowlyDbContext context) : IProcessReposito
                 x.Id, x.Title, x.CustomerId, x.CustomerName, x.ProcessTypeName, x.Status, x.WaitingOn, x.ActiveStepName,
                 x.ActiveStepAgencyName, x.ActiveStepStartedAt, x.ActiveStepDueAt, x.AssigneeId, x.AssigneeName,
                 x.AvatarUpdatedAt?.ToUnixTimeMilliseconds().ToString(), x.StepsDone, x.StepsTotal, x.ParentId, x.UpdatedAt, x.DocumentsToSend,
-                x.PauseWaitingOnName, x.ExpectedReturnOn))
+                x.PauseWaitingOnName, x.ExpectedReturnOn, x.LicenseExpiresOn, x.RenewalStartsOn))
             .ToList();
 
         return (items, total);

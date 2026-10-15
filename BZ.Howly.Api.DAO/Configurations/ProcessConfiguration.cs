@@ -38,6 +38,8 @@ public sealed class ProcessConfiguration : IEntityTypeConfiguration<Process>
         builder.HasIndex(tenant, nameof(Process.ParentId));
         builder.HasIndex(tenant, nameof(Process.Status), nameof(Process.WaitingOn));
         builder.HasIndex(tenant, nameof(Process.Status), nameof(Process.ActiveStepDueAt));
+        builder.HasIndex(tenant, nameof(Process.RenewalStartsOn));
+        builder.HasOne<Process>().WithMany().HasForeignKey(p => p.RenewalProcessId).OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne<Customer>().WithMany().HasForeignKey(p => p.CustomerId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<ProcessType>().WithMany().HasForeignKey(p => p.ProcessTypeId).OnDelete(DeleteBehavior.Restrict);

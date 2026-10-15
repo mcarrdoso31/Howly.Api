@@ -133,6 +133,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IOverdueStepService, OverdueStepService>();
         services.AddScoped<IPauseReturnService, PauseReturnService>();
+        services.AddScoped<IRenewalReminderService, RenewalReminderService>();
         services.AddScoped<ITenantProfileService, TenantProfileService>();
         services.AddScoped<IAgencyService, AgencyService>();
         services.AddScoped<IDocumentExampleService, DocumentExampleService>();
