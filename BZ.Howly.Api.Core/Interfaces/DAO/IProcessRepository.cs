@@ -17,8 +17,11 @@ public interface IProcessRepository
     /// <summary>In-progress or paused processes under <paramref name="assigneeId"/>, ready to be changed.</summary>
     Task<IReadOnlyList<Process>> ListOpenAssignedToAsync(Guid assigneeId, CancellationToken cancellationToken = default);
 
-    /// <summary>Counts of the in-progress processes (of <paramref name="assigneeId"/> when given), in one query.</summary>
-    Task<ProcessSummaryResponse> SummarizeAsync(Guid? assigneeId, DateTimeOffset now, CancellationToken cancellationToken = default);
+    /// <summary>The home page counts (of <paramref name="assigneeId"/>'s processes when given), in one query.</summary>
+    Task<ProcessSummaryResponse> SummarizeAsync(Guid? assigneeId, DateTimeOffset now, DateOnly today, CancellationToken cancellationToken = default);
+
+    /// <summary>Paused processes whose expected return arrived (on <paramref name="today"/>, local date) and were not reminded yet.</summary>
+    Task<IReadOnlyList<Process>> ListPausedDueAsync(DateOnly today, CancellationToken cancellationToken = default);
 
     /// <summary>Subprocesses of <paramref name="parentId"/> still in progress or paused.</summary>
     Task<int> CountOpenSubprocessesAsync(Guid parentId, CancellationToken cancellationToken = default);

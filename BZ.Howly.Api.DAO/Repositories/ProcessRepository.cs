@@ -26,22 +26,31 @@ public sealed class ProcessRepository(HowlyDbContext context) : IProcessReposito
             .Where(p => p.AssigneeId == assigneeId && (p.Status == ProcessStatus.InProgress || p.Status == ProcessStatus.Paused))
             .ToListAsync(cancellationToken);
 
-    public async Task<ProcessSummaryResponse> SummarizeAsync(Guid? assigneeId, DateTimeOffset now, CancellationToken cancellationToken = default)
+    public async Task<ProcessSummaryResponse> SummarizeAsync(Guid? assigneeId, DateTimeOffset now, DateOnly today, CancellationToken cancellationToken = default)
     {
-        // Paused, completed and cancelled processes wait on nobody: only in-progress ones count.
-        var open = context.Processes.Where(p => p.Status == ProcessStatus.InProgress && (assigneeId == null || p.AssigneeId == assigneeId));
+        // Completed and cancelled processes are history. In progress ones wait on someone (paused ones wait on nobody,
+        // their WaitingOn is null); paused ones are counted apart, with those past their expected return.
+        var open = context.Processes.Where(p =>
+            (p.Status == ProcessStatus.InProgress || p.Status == ProcessStatus.Paused) && (assigneeId == null || p.AssigneeId == assigneeId));
         var counts = await open
             .GroupBy(_ => 1)
             .Select(g => new ProcessSummaryResponse(
-                g.Count(),
-                g.Count(p => p.ActiveStepDueAt != null && p.ActiveStepDueAt < now),
+                g.Count(p => p.Status == ProcessStatus.InProgress),
+                g.Count(p => p.Status == ProcessStatus.InProgress && p.ActiveStepDueAt != null && p.ActiveStepDueAt < now),
                 g.Count(p => p.WaitingOn == StepOwner.Customer),
                 g.Count(p => p.WaitingOn == StepOwner.Staff),
                 g.Count(p => p.WaitingOn == StepOwner.Agency),
-                g.Count(p => p.WaitingOn == StepOwner.Payment)))
+                g.Count(p => p.WaitingOn == StepOwner.Payment),
+                g.Count(p => p.Status == ProcessStatus.Paused),
+                g.Count(p => p.Status == ProcessStatus.Paused && p.ExpectedReturnOn != null && p.ExpectedReturnOn < today)))
             .SingleOrDefaultAsync(cancellationToken);
-        return counts ?? new ProcessSummaryResponse(0, 0, 0, 0, 0, 0);
+        return counts ?? new ProcessSummaryResponse(0, 0, 0, 0, 0, 0, 0, 0);
     }
+
+    public async Task<IReadOnlyList<Process>> ListPausedDueAsync(DateOnly today, CancellationToken cancellationToken = default) =>
+        await context.Processes
+            .Where(p => p.Status == ProcessStatus.Paused && p.ExpectedReturnOn != null && p.ExpectedReturnOn <= today && p.ReturnReminderSentAt == null)
+            .ToListAsync(cancellationToken);
 
     public Task<int> CountOpenSubprocessesAsync(Guid parentId, CancellationToken cancellationToken = default) =>
         context.Processes.CountAsync(
@@ -104,6 +113,8 @@ public sealed class ProcessRepository(HowlyDbContext context) : IProcessReposito
                 StepsTotal = x.process.Steps.Count,
                 x.process.ParentId,
                 x.process.UpdatedAt,
+                x.process.PauseWaitingOnName,
+                x.process.ExpectedReturnOn,
                 // What the customer still has to send in the current step.
                 DocumentsToSend = context.ProcessDocuments.Count(d =>
                     d.ProcessId == x.process.Id && d.StepId == x.process.ActiveStepId && d.Kind == DocumentKind.Requested &&
@@ -114,7 +125,8 @@ public sealed class ProcessRepository(HowlyDbContext context) : IProcessReposito
         var items = page.Select(x => new ProcessListItemResponse(
                 x.Id, x.Title, x.CustomerId, x.CustomerName, x.ProcessTypeName, x.Status, x.WaitingOn, x.ActiveStepName,
                 x.ActiveStepAgencyName, x.ActiveStepStartedAt, x.ActiveStepDueAt, x.AssigneeId, x.AssigneeName,
-                x.AvatarUpdatedAt?.ToUnixTimeMilliseconds().ToString(), x.StepsDone, x.StepsTotal, x.ParentId, x.UpdatedAt, x.DocumentsToSend))
+                x.AvatarUpdatedAt?.ToUnixTimeMilliseconds().ToString(), x.StepsDone, x.StepsTotal, x.ParentId, x.UpdatedAt, x.DocumentsToSend,
+                x.PauseWaitingOnName, x.ExpectedReturnOn))
             .ToList();
 
         return (items, total);

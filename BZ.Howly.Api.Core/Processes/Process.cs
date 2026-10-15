@@ -41,6 +41,21 @@ public sealed class Process
     /// <summary>Since when the process is paused; the time paused is added to the deadline of the active step on resume.</summary>
     public DateTimeOffset? PausedAt { get; private set; }
 
+    /// <summary>While paused: who the process waits on (an agency, the customer, someone else), when told.</summary>
+    public PauseWaitingOn? PauseWaitingOn { get; private set; }
+
+    /// <summary>While paused on an agency: which one, from the catalog.</summary>
+    public Guid? PauseAgencyId { get; private set; }
+
+    /// <summary>While paused: how who it waits on shows (the agency acronym or the name typed); null for the customer.</summary>
+    public string? PauseWaitingOnName { get; private set; }
+
+    /// <summary>While paused: the day it is expected back (the consultancy's local date), when known.</summary>
+    public DateOnly? ExpectedReturnOn { get; private set; }
+
+    /// <summary>When the staff were told the expected return arrived (once per pause).</summary>
+    public DateTimeOffset? ReturnReminderSentAt { get; private set; }
+
     /// <summary>Changes on every change of the process: saving over a version someone else already changed is refused (409).</summary>
     public Guid Version { get; private set; }
 
@@ -187,17 +202,53 @@ public sealed class Process
         RefreshActiveStep(now);
     }
 
-    public void Pause(Actor actor, string? reason, DateTimeOffset now)
+    /// <summary>
+    /// Stops the process (frozen until the staff resume or cancel it). Besides the reason, it may say who it waits on and
+    /// when it is expected back (<paramref name="today"/> is the consultancy's local date: the return cannot be before it).
+    /// </summary>
+    public void Pause(Actor actor, string? reason, DateTimeOffset now, PauseDetails? details = null, DateOnly? today = null)
     {
         var text = Required(reason, nameof(reason));
         if (Status != ProcessStatus.InProgress)
             throw new ProcessRuleException("Only processes in progress can be paused.");
+        var (waitingOn, agencyId, waitingOnName, expectedReturn) = PauseDetails.Normalize(details, today ?? DateOnly.FromDateTime(now.UtcDateTime));
 
         Status = ProcessStatus.Paused;
         StatusReason = text;
         PausedAt = now;
-        Record(ProcessEventType.Paused, actor, now, comment: text);
+        PauseWaitingOn = waitingOn;
+        PauseAgencyId = agencyId;
+        PauseWaitingOnName = waitingOnName;
+        ExpectedReturnOn = expectedReturn;
+        ReturnReminderSentAt = null;
+        Record(ProcessEventType.Paused, actor, now, comment: text, details: waitingOnName);
         RefreshActiveStep(now);
+    }
+
+    /// <summary>
+    /// Tells the staff (once) that the expected return of a paused process arrived; they decide whether to resume. False
+    /// when not paused, without an expected return, not there yet or already told.
+    /// </summary>
+    public bool MarkPauseReturnDue(DateOnly today, DateTimeOffset now)
+    {
+        if (Status != ProcessStatus.Paused || ExpectedReturnOn is not { } expected || expected > today || ReturnReminderSentAt is not null)
+            return false;
+
+        ReturnReminderSentAt = now;
+        Record(ProcessEventType.PauseReturnDue, Actor.System, now, details: PauseWaitingOnName);
+        // A new version, but not "updated": a reminder from the system does not move the process up the lists.
+        Version = Guid.NewGuid();
+        return true;
+    }
+
+    private void ClearPause()
+    {
+        PausedAt = null;
+        PauseWaitingOn = null;
+        PauseAgencyId = null;
+        PauseWaitingOnName = null;
+        ExpectedReturnOn = null;
+        ReturnReminderSentAt = null;
     }
 
     /// <summary>Back to work on the same step; the time paused does not count against its deadline.</summary>
@@ -210,7 +261,7 @@ public sealed class Process
             ActiveStep?.AddPause(now - pausedAt);
         Status = ProcessStatus.InProgress;
         StatusReason = null;
-        PausedAt = null;
+        ClearPause();
         Record(ProcessEventType.Resumed, actor, now);
         RefreshActiveStep(now);
     }
@@ -227,7 +278,7 @@ public sealed class Process
         ActiveStep?.Finish(StepStatus.Cancelled, now);
         Status = ProcessStatus.Cancelled;
         StatusReason = text;
-        PausedAt = null;
+        ClearPause();
         Record(ProcessEventType.Cancelled, actor, now, comment: text);
         RefreshActiveStep(now);
     }

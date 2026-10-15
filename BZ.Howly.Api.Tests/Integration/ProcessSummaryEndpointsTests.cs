@@ -76,7 +76,7 @@ public class ProcessSummaryEndpointsTests(HowlyApiFactory factory) : IClassFixtu
 
         // Two days later, the customer's one-day step is late (the 30-day staff step is not).
         using var scope = factory.CreateTenantScope(slug);
-        var later = await scope.ServiceProvider.GetRequiredService<IProcessRepository>().SummarizeAsync(null, DateTimeOffset.UtcNow.AddDays(2));
+        var later = await scope.ServiceProvider.GetRequiredService<IProcessRepository>().SummarizeAsync(null, DateTimeOffset.UtcNow.AddDays(2), DateOnly.FromDateTime(DateTime.UtcNow.AddDays(2)));
         later.Overdue.Should().Be(1);
     }
 

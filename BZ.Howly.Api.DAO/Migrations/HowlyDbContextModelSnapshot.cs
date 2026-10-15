@@ -309,8 +309,22 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateOnly?>("ExpectedReturnOn")
+                        .HasColumnType("date");
+
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("PauseAgencyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PauseWaitingOn")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("PauseWaitingOnName")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
 
                     b.Property<DateTimeOffset?>("PausedAt")
                         .HasColumnType("datetimeoffset");
@@ -322,6 +336,9 @@ namespace BZ.Howly.Api.DAO.Migrations
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
+
+                    b.Property<DateTimeOffset?>("ReturnReminderSentAt")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -358,6 +375,8 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.HasIndex("CustomerId");
 
                     b.HasIndex("ParentId");
+
+                    b.HasIndex("PauseAgencyId");
 
                     b.HasIndex("ProcessTypeId");
 
@@ -934,6 +953,11 @@ namespace BZ.Howly.Api.DAO.Migrations
                     b.HasOne("BZ.Howly.Api.Core.Processes.Process", null)
                         .WithMany()
                         .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BZ.Howly.Api.Core.Agencies.Agency", null)
+                        .WithMany()
+                        .HasForeignKey("PauseAgencyId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("BZ.Howly.Api.Core.Processes.ProcessType", null)

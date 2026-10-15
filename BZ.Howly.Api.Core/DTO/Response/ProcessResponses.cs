@@ -23,7 +23,9 @@ public sealed record ProcessListItemResponse(
     int StepsTotal,
     Guid? ParentId,
     DateTimeOffset UpdatedAt,
-    int DocumentsToSend);
+    int DocumentsToSend,
+    string? PauseWaitingOnName = null,
+    DateOnly? ExpectedReturnOn = null);
 
 public sealed record PersonResponse(Guid Id, string Name, string? AvatarVersion);
 
@@ -47,7 +49,8 @@ public sealed record ProcessResponse(
     IReadOnlyList<ProcessStepResponse> Steps,
     IReadOnlyList<ProcessEventResponse> Events,
     IReadOnlyList<ProcessListItemResponse> Children,
-    IReadOnlyList<ProcessDocumentResponse> Documents);
+    IReadOnlyList<ProcessDocumentResponse> Documents,
+    PauseResponse? Pause = null);
 
 /// <param name="StepId">Null for extra documents, which belong to the whole process.</param>
 /// <param name="MayContainMacros">Office format that can carry macros: the screens warn before opening it.</param>
@@ -111,6 +114,17 @@ public sealed record ProcessEventResponse(
             e.ActorId == customerUserId);
 }
 
-/// <summary>The staff home page counts: open processes, the late ones and who each one waits on.</summary>
+/// <summary>
+/// The staff home page counts: processes in progress (<c>Open</c>), the late ones and who each one waits on; paused
+/// ones apart, with those past their expected return.
+/// </summary>
 public sealed record ProcessSummaryResponse(
-    int Open, int Overdue, int WaitingOnCustomer, int WaitingOnStaff, int WaitingOnAgency, int WaitingOnPayment);
+    int Open, int Overdue, int WaitingOnCustomer, int WaitingOnStaff, int WaitingOnAgency, int WaitingOnPayment, int Paused, int PausedPastReturn);
+
+/// <summary>While paused: who it waits on (when told) and the expected day back (when known).</summary>
+public sealed record PauseResponse(DateTimeOffset PausedAt, PauseWaitingOn? WaitingOn, Guid? AgencyId, string? WaitingOnName, DateOnly? ExpectedReturnOn)
+{
+    public static PauseResponse? From(Process process) => process.Status == ProcessStatus.Paused && process.PausedAt is { } pausedAt
+        ? new PauseResponse(pausedAt, process.PauseWaitingOn, process.PauseAgencyId, process.PauseWaitingOnName, process.ExpectedReturnOn)
+        : null;
+}

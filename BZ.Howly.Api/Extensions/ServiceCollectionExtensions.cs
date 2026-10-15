@@ -131,6 +131,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProcessDocumentService, ProcessDocumentService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IOverdueStepService, OverdueStepService>();
+        services.AddScoped<IPauseReturnService, PauseReturnService>();
         services.AddScoped<ITenantProfileService, TenantProfileService>();
         services.AddScoped<IAgencyService, AgencyService>();
 

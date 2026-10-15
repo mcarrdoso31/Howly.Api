@@ -24,6 +24,9 @@ public sealed class ProcessConfiguration : IEntityTypeConfiguration<Process>
         builder.Property(p => p.WaitingOn).HasConversion<string>().HasMaxLength(EnumLength);
         builder.Property(p => p.ActiveStepName).HasMaxLength(ProcessType.MaxNameLength);
         builder.Property(p => p.Version).IsConcurrencyToken();
+        builder.Property(p => p.PauseWaitingOn).HasConversion<string>().HasMaxLength(EnumLength);
+        builder.Property(p => p.PauseWaitingOnName).HasMaxLength(PauseDetails.MaxNameLength);
+        builder.HasOne<Agency>().WithMany().HasForeignKey(p => p.PauseAgencyId).OnDelete(DeleteBehavior.Restrict);
         builder.Ignore(p => p.ActiveStep);
 
         // Every index starts with the tenant, like every query. Lists come newest first (also per customer, for the

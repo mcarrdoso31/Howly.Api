@@ -63,6 +63,9 @@ public enum ProcessEventType
     /// </summary>
     StepOverdue,
 
+    /// <summary>The expected return of a paused process arrived: a reminder for the staff (who waits in the details).</summary>
+    PauseReturnDue,
+
     /// <summary>The agency of an agency step changed (the new one in the details).</summary>
     StepAgencyChanged,
 
@@ -188,7 +191,7 @@ public sealed class ProcessEvent
     /// <summary>Everything on the timeline is shared with the customer, except the staff's internal notes.</summary>
     public bool IsVisibleToCustomer => Type switch
     {
-        ProcessEventType.InternalNote => false,
+        ProcessEventType.InternalNote or ProcessEventType.PauseReturnDue => false,
         ProcessEventType.StepOverdue => Details == nameof(StepOwner.Customer),
         _ => true,
     };

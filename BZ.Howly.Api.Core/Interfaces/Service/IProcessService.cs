@@ -18,7 +18,7 @@ public interface IProcessService
     Task<OperationResult<ProcessResponse>> AdvanceAsync(Guid id, ProcessCommentRequest request, Guid actorId, CancellationToken cancellationToken = default);
     Task<OperationResult<ProcessResponse>> SkipAsync(Guid id, ProcessCommentRequest request, Guid actorId, CancellationToken cancellationToken = default);
     Task<OperationResult<ProcessResponse>> ReturnAsync(Guid id, ReturnProcessRequest request, Guid actorId, CancellationToken cancellationToken = default);
-    Task<OperationResult<ProcessResponse>> PauseAsync(Guid id, ProcessReasonRequest request, Guid actorId, CancellationToken cancellationToken = default);
+    Task<OperationResult<ProcessResponse>> PauseAsync(Guid id, PauseProcessRequest request, Guid actorId, CancellationToken cancellationToken = default);
     Task<OperationResult<ProcessResponse>> ResumeAsync(Guid id, Guid actorId, CancellationToken cancellationToken = default);
     Task<OperationResult<ProcessResponse>> CancelAsync(Guid id, ProcessReasonRequest request, Guid actorId, CancellationToken cancellationToken = default);
     Task<OperationResult<ProcessResponse>> AssignAsync(Guid id, AssignProcessRequest request, Guid actorId, CancellationToken cancellationToken = default);

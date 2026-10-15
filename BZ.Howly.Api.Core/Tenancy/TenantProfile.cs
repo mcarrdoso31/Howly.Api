@@ -26,6 +26,10 @@ public sealed record TenantProfile(
 
     public static readonly TenantProfile Empty = new(null, null, null, null, null, null, null, null, DefaultTimeZone);
 
+    /// <summary>The consultancy's calendar day at <paramref name="now"/> (deadlines and expected returns are local days).</summary>
+    public DateOnly LocalDate(DateTimeOffset now) =>
+        DateOnly.FromDateTime(TimeZoneInfo.TryFindSystemTimeZoneById(TimeZone, out var zone) ? TimeZoneInfo.ConvertTime(now, zone).DateTime : now.UtcDateTime);
+
     /// <summary>
     /// Checks typed data and returns it normalized, or the errors keyed like the request body ("name", "cnpj"…).
     /// </summary>

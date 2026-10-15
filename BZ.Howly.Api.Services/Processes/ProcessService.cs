@@ -6,6 +6,7 @@ using BZ.Howly.Api.Core.Interfaces.Service;
 using BZ.Howly.Api.Core.Processes;
 using BZ.Howly.Api.Core.Shared;
 using BZ.Howly.Api.Core.Shared.Exceptions;
+using BZ.Howly.Api.Core.Tenancy;
 
 namespace BZ.Howly.Api.Services.Processes;
 
@@ -18,6 +19,7 @@ public sealed class ProcessService(
     ICustomerRepository customerRepository,
     IUserAccountStore userAccountStore,
     IAgencyRepository agencyRepository,
+    ITenantContext tenantContext,
     TimeProvider timeProvider) : IProcessService
 {
     public const int MaxPageSize = 100;
@@ -31,7 +33,7 @@ public sealed class ProcessService(
     }
 
     public Task<ProcessSummaryResponse> SummarizeAsync(Guid? assigneeId, CancellationToken cancellationToken = default) =>
-        processRepository.SummarizeAsync(assigneeId, timeProvider.GetUtcNow(), cancellationToken);
+        processRepository.SummarizeAsync(assigneeId, timeProvider.GetUtcNow(), Today(), cancellationToken);
 
     public async Task<OperationResult<ProcessResponse>> GetAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -145,8 +147,34 @@ public sealed class ProcessService(
             document.Waive();
     }
 
-    public Task<OperationResult<ProcessResponse>> PauseAsync(Guid id, ProcessReasonRequest request, Guid actorId, CancellationToken cancellationToken = default) =>
-        ActAsync(id, actorId, "reason", (process, actor, now) => process.Pause(actor, request.Reason, now), cancellationToken);
+    /// <remarks>
+    /// Who it waits on and the expected return are optional; an agency must be an active one of the catalog, and the
+    /// expected return a day not before today in the consultancy's time zone.
+    /// </remarks>
+    public async Task<OperationResult<ProcessResponse>> PauseAsync(Guid id, PauseProcessRequest request, Guid actorId, CancellationToken cancellationToken = default)
+    {
+        var today = Today();
+        var name = request.WaitingOnName;
+        if (request.WaitingOn == PauseWaitingOn.Agency && request.AgencyId is { } agencyId)
+        {
+            var agency = await agencyRepository.FindAsync(agencyId, cancellationToken);
+            if (agency is not { IsActive: true })
+                return OperationResult<ProcessResponse>.Invalid("agencyId", "Choose an active agency of the catalog.");
+            name = agency.DisplayName;
+        }
+
+        var details = request.WaitingOn is null && request.ExpectedReturnOn is null
+            ? null
+            : new PauseDetails(request.WaitingOn, request.AgencyId, name, request.ExpectedReturnOn);
+        var errors = PauseDetails.Validate(details, today);
+        if (errors.Count > 0)
+            return OperationResult<ProcessResponse>.Invalid(errors);
+
+        return await ActAsync(id, actorId, "reason", (process, actor, now) => process.Pause(actor, request.Reason, now, details, today), cancellationToken);
+    }
+
+    /// <summary>Today in the consultancy's time zone.</summary>
+    private DateOnly Today() => (tenantContext.Tenant?.Profile ?? TenantProfile.Empty).LocalDate(timeProvider.GetUtcNow());
 
     public Task<OperationResult<ProcessResponse>> ResumeAsync(Guid id, Guid actorId, CancellationToken cancellationToken = default) =>
         ActAsync(id, actorId, "status", (process, actor, now) => process.Resume(actor, now), cancellationToken);
@@ -292,6 +320,7 @@ public sealed class ProcessService(
             process.Steps.Select(ProcessStepResponse.From).ToList(),
             process.Events.Where(e => !forCustomer || e.IsVisibleToCustomer).Select(e => ProcessEventResponse.From(e, seenByCustomer, customer?.UserId)).ToList(),
             children,
-            (await documentRepository.ListByProcessAsync(process.Id, cancellationToken)).Select(ProcessDocumentResponse.From).ToList());
+            (await documentRepository.ListByProcessAsync(process.Id, cancellationToken)).Select(ProcessDocumentResponse.From).ToList(),
+            PauseResponse.From(process));
     }
 }

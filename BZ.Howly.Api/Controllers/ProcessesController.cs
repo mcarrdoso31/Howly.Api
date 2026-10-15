@@ -65,7 +65,7 @@ public sealed class ProcessesController(IProcessService processService, IProcess
         this.ToActionResult(await processService.ReturnAsync(id, request, this.CurrentUserId(), cancellationToken), Ok);
 
     [HttpPost("{id:guid}/pause")]
-    public async Task<IActionResult> Pause(Guid id, ProcessReasonRequest request, CancellationToken cancellationToken) =>
+    public async Task<IActionResult> Pause(Guid id, PauseProcessRequest request, CancellationToken cancellationToken) =>
         this.ToActionResult(await processService.PauseAsync(id, request, this.CurrentUserId(), cancellationToken), Ok);
 
     [HttpPost("{id:guid}/resume")]
